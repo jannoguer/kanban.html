@@ -112,6 +112,9 @@ document.addEventListener('keydown', e => {
   if (e.key === '/') {
     e.preventDefault();
     search.focus();
+  } else if (e.key.toLowerCase() === 'n') {
+    e.preventDefault();
+    openDialog(null);
   }
 });
 
@@ -125,6 +128,12 @@ function openDialog(task, status = 'backlog') {
   dialog.showModal();
 }
 
+form.onkeydown = e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    form.requestSubmit();
+  }
+};
 form.onsubmit = () => {
   const data = {
     title: fields.title.value.trim(),
@@ -170,6 +179,10 @@ deleteButton.onclick = () => {
 // Clicks on the dialog element itself (not the form) land on the backdrop.
 dialog.onclick = e => {
   if (e.target === dialog) dialog.close();
+};
+// Opened from the body (a card click or a shortcut), there is no focus to restore, so it would stay on a hidden field and block the shortcuts.
+dialog.onclose = () => {
+  if (dialog.contains(document.activeElement)) document.activeElement.blur();
 };
 
 // Fires only in other tabs; render() writing back the same value raises no further event.
