@@ -101,3 +101,11 @@ textarea { resize: vertical; min-height: 80px; }
 .actions button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); }
 .actions .primary { margin-left: auto; background: var(--fg); color: var(--surface); border-color: var(--fg); }
 .actions .danger { color: #ef4444; }
+
+#toast:not([hidden]) {
+  position: fixed; bottom: 20px; left: 50%; translate: -50%;
+  display: flex; align-items: center; gap: 16px; padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / .15);
+}
+#toast button { font-weight: 600; text-decoration: underline; }

@@ -15,6 +15,7 @@ const fields = form.elements;
 const deleteButton = document.getElementById('delete');
 const boardName = document.getElementById('board-name');
 const search = document.getElementById('search');
+const toast = document.getElementById('toast');
 // Carries data over from the old unprefixed keys, which are left in place since another local page may own them.
 for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   const old = localStorage.getItem(oldKey);
@@ -143,8 +144,26 @@ form.onsubmit = () => {
 
 document.getElementById('add').onclick = () => openDialog(null);
 document.getElementById('cancel').onclick = () => dialog.close();
+let toastTimer;
+function hideToast() {
+  clearTimeout(toastTimer);
+  toast.hidden = true;
+}
 deleteButton.onclick = () => {
-  tasks = tasks.filter(t => t.id !== editingId);
+  // -1 when another tab already deleted it.
+  const index = tasks.findIndex(t => t.id === editingId);
+  if (index !== -1) {
+    const [task] = tasks.splice(index, 1);
+    document.getElementById('undo').onclick = () => {
+      // Skipped if another tab restored it meanwhile; an index past the end appends.
+      if (!tasks.some(t => t.id === task.id)) tasks.splice(index, 0, task);
+      hideToast();
+      render();
+    };
+    clearTimeout(toastTimer);
+    toast.hidden = false;
+    toastTimer = setTimeout(hideToast, 5000);
+  }
   dialog.close();
   render();
 };
