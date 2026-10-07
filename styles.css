@@ -95,19 +95,28 @@ input, textarea, select {
 }
 textarea { resize: vertical; min-height: 80px; }
 .actions { display: flex; gap: 8px; margin-top: 18px; }
-.actions button, #toast button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); }
-.actions .primary, #toast .primary { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+.actions button, .toast button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); }
+.actions .primary, .toast .primary { background: var(--fg); color: var(--surface); border-color: var(--fg); }
 .actions .primary { margin-left: auto; }
 .actions .danger { color: #ef4444; }
 
-#toast:not([hidden]) {
+.toasts {
   position: fixed; bottom: 20px; left: 50%; translate: -50%;
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  width: min(320px, calc(100% - 32px)); padding: 10px 10px 10px 16px; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: max-content; max-width: calc(100vw - 32px);
+}
+.toast:not([hidden]) {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 10px 10px 10px 16px; overflow: hidden;
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
   box-shadow: 0 4px 16px rgb(0 0 0 / .15);
 }
+#undo-toast { width: 320px; max-width: 100%; }
 /* Quotes and "deleted" sit outside the title, so only the title is cut short. */
-#toast .message { display: flex; min-width: 0; white-space: pre; }
-#toast .title { overflow: hidden; text-overflow: ellipsis; }
+#undo-toast .message { display: flex; min-width: 0; white-space: pre; }
+#undo-toast .title { overflow: hidden; text-overflow: ellipsis; }
+.warning:not([hidden]) { gap: 8px; color: #fee2e2; background: #450a0a; border-color: #ef4444; }
+.warning strong { color: #fff; }
+.warning .dismiss { padding: 4px; border: 0; color: #fca5a5; }
+.warning .dismiss:hover { color: #fff; }
 .countdown { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: var(--fg); transform-origin: left; }

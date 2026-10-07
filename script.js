@@ -5,6 +5,7 @@ const STATUSES = [
 const TASKS_KEY = 'planning-board:tasks';
 const THEME_KEY = 'planning-board:theme';
 const NAME_KEY = 'planning-board:name';
+const ROOM_KEY = 'planning-board:room';
 const DEFAULT_NAME = 'PLANNING BOARD';
 const DRAG_TYPE = 'application/x-planning-board-task';
 const root = document.documentElement;
@@ -15,7 +16,14 @@ const fields = form.elements;
 const deleteButton = document.getElementById('delete');
 const boardName = document.getElementById('board-name');
 const search = document.getElementById('search');
-const toast = document.getElementById('toast');
+const undoToast = document.getElementById('undo-toast');
+const storageFull = document.getElementById('storage-full');
+// Longest board name and theme values, with their keys.
+const SETTINGS_ROOM = NAME_KEY.length + boardName.maxLength + THEME_KEY.length + 'light'.length;
+// Storage counts as full when not even this would fit.
+const SMALLEST_TASK = JSON.stringify({ id: crypto.randomUUID(), title: 'x', description: '', status: STATUSES[0][0] }).length + 1;
+// Keyed by element because imported tasks may share an id.
+const cardTasks = new WeakMap();
 // Carries data over from the old unprefixed keys, which are left in place since another local page may own them.
 for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   const old = localStorage.getItem(oldKey);
@@ -74,6 +82,7 @@ function createCard(task) {
   el.querySelector('strong').textContent = task.title;
   el.querySelector('p').textContent = task.description;
   el.dataset.id = task.id;
+  cardTasks.set(el, task);
   el.onclick = () => openDialog(task);
   el.ondragstart = e => {
     e.dataTransfer.setData(DRAG_TYPE, task.id);
@@ -89,24 +98,63 @@ function createCard(task) {
 }
 
 function render() {
-  localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+  for (const section of board.children) {
+    const items = tasks.filter(t => t.status === section.dataset.status);
+    section.querySelector('.list').replaceChildren(...items.map(createCard));
+  }
+  applyFilter();
+}
+
+// Hides cards rather than rebuilding them, so typing stays fast on large boards.
+function applyFilter() {
   const query = search.value.trim().toLowerCase();
   // join() because imported tasks may lack a description.
   const matches = t => [t.title, t.description].join('\n').toLowerCase().includes(query);
   for (const section of board.children) {
-    const items = tasks.filter(t => t.status === section.dataset.status);
-    const shown = items.filter(matches);
-    section.querySelector('span').textContent = query ? `${shown.length}/${items.length}` : items.length;
-    section.querySelector('.list').replaceChildren(...shown.map(createCard));
+    const cards = section.querySelectorAll('.task');
+    let shown = 0;
+    for (const card of cards) {
+      card.hidden = !matches(cardTasks.get(card));
+      if (!card.hidden) shown++;
+    }
+    section.querySelector('span').textContent = query ? `${shown}/${cards.length}` : cards.length;
   }
 }
 
-search.oninput = render;
+// False only when storage is full; any other failure is a real error.
+function store(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    if (e.name !== 'QuotaExceededError') throw e;
+    return false;
+  }
+}
+
+// The extra room keeps the board name and theme saveable, as an export cannot bring them back.
+function hasRoom(chars) {
+  const fits = store(ROOM_KEY, 'x'.repeat(chars + SETTINGS_ROOM));
+  localStorage.removeItem(ROOM_KEY);
+  return fits;
+}
+
+function saveTasks() {
+  const json = JSON.stringify(tasks);
+  const growth = json.length - (localStorage.getItem(TASKS_KEY)?.length ?? 0);
+  // Room is proven before writing, so other tabs never see a change that has to be taken back.
+  const saved = (growth <= 0 || hasRoom(growth)) && store(TASKS_KEY, json);
+  storageFull.hidden = saved && hasRoom(SMALLEST_TASK);
+  render();
+}
+document.getElementById('storage-dismiss').onclick = () => { storageFull.hidden = true; };
+
+search.oninput = applyFilter;
 search.onkeydown = e => {
   if (e.key !== 'Escape') return;
   search.value = '';
   search.blur();
-  render();
+  applyFilter();
 };
 document.addEventListener('keydown', e => {
   if (dialog.open || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
@@ -149,7 +197,7 @@ form.onsubmit = () => {
   } else {
     tasks.push({ id: crypto.randomUUID(), ...data });
   }
-  render();
+  saveTasks();
 };
 
 document.getElementById('add').onclick = () => openDialog(null);
@@ -158,7 +206,7 @@ document.getElementById('cancel').onclick = () => dialog.close();
 let countdown;
 function hideToast() {
   countdown?.cancel();
-  toast.hidden = true;
+  undoToast.hidden = true;
 }
 deleteButton.onclick = () => {
   // -1 when another tab already deleted it.
@@ -169,16 +217,16 @@ deleteButton.onclick = () => {
       // Skipped if another tab restored it meanwhile; an index past the end appends.
       if (!tasks.some(t => t.id === task.id)) tasks.splice(index, 0, task);
       hideToast();
-      render();
+      saveTasks();
     };
-    toast.querySelector('.title').textContent = task.title;
+    undoToast.querySelector('.title').textContent = task.title;
     countdown?.cancel();
-    toast.hidden = false;
-    countdown = toast.querySelector('.countdown').animate([{ scale: '1 1' }, { scale: '0 1' }], 5000);
+    undoToast.hidden = false;
+    countdown = undoToast.querySelector('.countdown').animate([{ scale: '1 1' }, { scale: '0 1' }], 5000);
     countdown.onfinish = hideToast;
   }
   dialog.close();
-  render();
+  saveTasks();
 };
 // Clicks on the dialog element itself (not the form) land on the backdrop.
 dialog.onclick = e => {
@@ -189,7 +237,7 @@ dialog.onclose = () => {
   if (dialog.contains(document.activeElement)) document.activeElement.blur();
 };
 
-// Fires only in other tabs; render() writing back the same value raises no further event.
+// Fires only in other tabs, which have already saved the change.
 addEventListener('storage', e => {
   if (e.key === TASKS_KEY) {
     tasks = JSON.parse(e.newValue || '[]');
@@ -216,7 +264,7 @@ function moveTask(id, status, beforeId) {
 function dropPoint(e) {
   const list = e.target.closest('section')?.querySelector('.list');
   if (!list) return null;
-  const before = [...list.querySelectorAll('.task:not(.dragging)')].find(card => {
+  const before = [...list.querySelectorAll('.task:not(.dragging, [hidden])')].find(card => {
     const box = card.getBoundingClientRect();
     return e.clientY < box.top + box.height / 2;
   });
@@ -245,7 +293,7 @@ board.ondrop = e => {
   const point = dropPoint(e);
   if (!point) return;
   moveTask(e.dataTransfer.getData(DRAG_TYPE), point.list.parentElement.dataset.status, point.before?.dataset.id ?? null);
-  render();
+  saveTasks();
 };
 
 document.getElementById('export').onclick = () => {
@@ -278,7 +326,8 @@ importFile.onchange = async () => {
   }
   if (tasks.length && !confirm(`Replace the ${tasks.length} current tasks with the ${imported.length} in the file?`)) return;
   tasks = imported;
-  render();
+  saveTasks();
 };
 
 render();
+storageFull.hidden = hasRoom(SMALLEST_TASK);

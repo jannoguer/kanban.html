@@ -44,6 +44,9 @@
     </div>
   </form>
 </dialog>
-<div id="toast" role="status" hidden><span class="message">“<span class="title"></span>” deleted</span><button class="primary" id="undo">Undo</button><div class="countdown"></div></div>
+<div class="toasts">
+  <div class="toast warning" id="storage-full" role="alert" hidden><span class="message"><strong>Storage full.</strong> This change is not saved. Export to keep a copy, then delete tasks to free space.</span><button class="dismiss" id="storage-dismiss" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="toast" id="undo-toast" role="status" hidden><span class="message">“<span class="title"></span>” deleted</span><button class="primary" id="undo">Undo</button><div class="countdown"></div></div>
+</div>
 </body>
 </html>
