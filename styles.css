@@ -3,6 +3,7 @@
   color-scheme: light dark;
   --bg: light-dark(#f7f7f8, #131417); --surface: light-dark(#ffffff, #1c1e23);
   --fg: light-dark(#1f2328, #e7e7ea); --muted: light-dark(#6b7280, #8b8f98); --line: light-dark(#e4e4e7, #2a2d34);
+  --danger: #ef4444;
 }
 [data-theme="light"] { color-scheme: light; }
 [data-theme="dark"] { color-scheme: dark; }
@@ -11,7 +12,7 @@
 [data-status="progress"]  { --accent: #f59e0b; }
 [data-status="review"]    { --accent: #8b5cf6; }
 [data-status="done"]      { --accent: #22c55e; }
-[data-status="cancelled"] { --accent: #ef4444; }
+[data-status="cancelled"] { --accent: var(--danger); }
 
 *, ::before, ::after { box-sizing: border-box; margin: 0; }
 body {
@@ -92,7 +93,7 @@ form { display: flex; flex-direction: column; gap: 12px; padding: 30px; }
 form h3 { font-size: 16px; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 /* Empty alt text: screen readers already announce required. */
-.field:has(:required) > span::after { content: " *" / ""; color: #ef4444; }
+.field:has(:required) > span::after { content: " *" / ""; color: var(--danger); }
 input, textarea, select {
   font: inherit; color: var(--fg); background: var(--bg);
   padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
@@ -102,7 +103,7 @@ textarea { resize: vertical; min-height: 80px; }
 .actions button, .toast button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); }
 .actions .primary, .toast .primary { background: var(--fg); color: var(--surface); border-color: var(--fg); }
 .actions .primary { margin-left: auto; }
-.actions .danger { color: #ef4444; }
+.actions .danger { color: var(--danger); }
 
 .toasts {
   position: fixed; bottom: 20px; left: 50%; translate: -50%;
@@ -119,7 +120,7 @@ textarea { resize: vertical; min-height: 80px; }
 /* Quotes and "deleted" sit outside the title, so only the title is cut short. */
 #undo-toast .message { display: flex; min-width: 0; white-space: pre; }
 #undo-toast .title { overflow: hidden; text-overflow: ellipsis; }
-.warning:not([hidden]) { gap: 8px; color: #fee2e2; background: #450a0a; border-color: #ef4444; }
+.warning:not([hidden]) { gap: 8px; color: #fee2e2; background: #450a0a; border-color: var(--danger); }
 .warning strong { color: #fff; }
 .warning .dismiss { padding: 4px; border: 0; color: #fca5a5; }
 .warning .dismiss:hover { color: #fff; }

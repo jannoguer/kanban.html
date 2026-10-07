@@ -7,6 +7,7 @@ const THEME_KEY = 'planning-board:theme';
 const NAME_KEY = 'planning-board:name';
 const ROOM_KEY = 'planning-board:room';
 const DEFAULT_NAME = 'PLANNING BOARD';
+const DEFAULT_STATUS = STATUSES[0][0];
 const DRAG_TYPE = 'application/x-planning-board-task';
 const root = document.documentElement;
 const board = document.querySelector('main');
@@ -16,18 +17,23 @@ const fields = form.elements;
 const deleteButton = document.getElementById('delete');
 const boardName = document.getElementById('board-name');
 const search = document.getElementById('search');
+const dialogTitle = dialog.querySelector('h3');
 const undoToast = document.getElementById('undo-toast');
-const storageFull = document.getElementById('storage-full');
+const undoButton = document.getElementById('undo');
+const undoTitle = undoToast.querySelector('.title');
+const undoCountdown = undoToast.querySelector('.countdown');
+const storageToast = document.getElementById('storage-full');
 // Longest board name and theme values, with their keys.
 const SETTINGS_ROOM = NAME_KEY.length + boardName.maxLength + THEME_KEY.length + 'light'.length;
 // Storage counts as full when not even this would fit.
-const SMALLEST_TASK = JSON.stringify({ id: crypto.randomUUID(), title: 'x', description: '', status: STATUSES[0][0] }).length + 1;
+const SMALLEST_TASK = JSON.stringify({ id: crypto.randomUUID(), title: 'x', description: '', status: DEFAULT_STATUS }).length + 1;
 // Matches the .list gap in styles.css.
 const GAP = 8;
 // Keyed by text, so an edited card is measured again.
 const heights = new Map();
 // join() because imported tasks may lack a description.
 const textOf = t => [t.title, t.description].join('\n');
+const byId = id => x => x.id === id;
 // Carries data over from the old unprefixed keys, which are left in place since another local page may own them.
 for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   const old = localStorage.getItem(oldKey);
@@ -38,6 +44,7 @@ let editingId = null;
 
 root.dataset.theme = localStorage.getItem(THEME_KEY)
   || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+// Theme and name are written directly: hasRoom() reserves space for them, so they cannot hit the quota.
 document.getElementById('theme').onclick = e => {
   // Enabled on first click only, so applying the stored theme on load does not animate.
   e.currentTarget.classList.add('animate');
@@ -118,11 +125,11 @@ function layout(column) {
   const end = i;
   let below = 0;
   while (i < items.length) below += sizes[i++];
-  // Live, and skips the drop marker.
-  const cards = list.getElementsByClassName('task');
   if (start >= column.end || end <= column.start) {
     list.replaceChildren(...items.slice(start, end).map(createCard));
   } else {
+    // Live, and skips the drop marker.
+    const cards = list.getElementsByClassName('task');
     // Only the edges change, so a card being dragged stays in place.
     for (; column.start < start; column.start++) cards[0].remove();
     for (; column.end > end; column.end--) cards[cards.length - 1].remove();
@@ -139,7 +146,7 @@ function layout(column) {
 function measureNew() {
   const fresh = tasks.filter(t => !heights.has(textOf(t)));
   const cards = fresh.map(createCard);
-  cards.forEach((card, i) => columns.find(c => c.id === fresh[i].status).list.append(card));
+  cards.forEach((card, i) => columns.find(byId(fresh[i].status)).list.append(card));
   cards.forEach((card, i) => heights.set(textOf(fresh[i]), card.getBoundingClientRect().height));
   cards.forEach(card => card.remove());
 }
@@ -196,10 +203,10 @@ function saveTasks() {
   const growth = json.length - (localStorage.getItem(TASKS_KEY)?.length ?? 0);
   // Room is proven before writing, so other tabs never see a change that has to be taken back.
   const saved = (growth <= 0 || hasRoom(growth)) && store(TASKS_KEY, json);
-  storageFull.hidden = saved && hasRoom(SMALLEST_TASK);
+  storageToast.hidden = saved && hasRoom(SMALLEST_TASK);
   render();
 }
-document.getElementById('storage-dismiss').onclick = () => { storageFull.hidden = true; };
+document.getElementById('storage-dismiss').onclick = () => { storageToast.hidden = true; };
 
 search.oninput = render;
 search.onkeydown = e => {
@@ -219,9 +226,9 @@ document.addEventListener('keydown', e => {
   }
 });
 
-function openDialog(task, status = 'backlog') {
+function openDialog(task, status = DEFAULT_STATUS) {
   editingId = task?.id ?? null;
-  dialog.querySelector('h3').textContent = task ? 'Edit task' : 'New task';
+  dialogTitle.textContent = task ? 'Edit task' : 'New task';
   fields.title.value = task?.title ?? '';
   fields.description.value = task?.description ?? '';
   fields.status.value = task?.status ?? status;
@@ -242,7 +249,7 @@ form.onsubmit = () => {
     status: fields.status.value,
   };
   // Looked up by id because a sync from another tab replaces the task objects; a task deleted there is re-created.
-  const task = tasks.find(t => t.id === editingId);
+  const task = tasks.find(byId(editingId));
   if (task) {
     if (task.status !== data.status) moveTask(task.id, data.status, null);
     Object.assign(task, data);
@@ -262,19 +269,19 @@ function hideToast() {
 }
 deleteButton.onclick = () => {
   // -1 when another tab already deleted it.
-  const index = tasks.findIndex(t => t.id === editingId);
+  const index = tasks.findIndex(byId(editingId));
   if (index !== -1) {
     const [task] = tasks.splice(index, 1);
-    document.getElementById('undo').onclick = () => {
+    undoButton.onclick = () => {
       // Skipped if another tab restored it meanwhile; an index past the end appends.
-      if (!tasks.some(t => t.id === task.id)) tasks.splice(index, 0, task);
+      if (!tasks.some(byId(task.id))) tasks.splice(index, 0, task);
       hideToast();
       saveTasks();
     };
-    undoToast.querySelector('.title').textContent = task.title;
+    undoTitle.textContent = task.title;
     countdown?.cancel();
     undoToast.hidden = false;
-    countdown = undoToast.querySelector('.countdown').animate([{ scale: '1 1' }, { scale: '0 1' }], 5000);
+    countdown = undoCountdown.animate([{ scale: '1 1' }, { scale: '0 1' }], 5000);
     countdown.onfinish = hideToast;
   }
   dialog.close();
@@ -304,12 +311,12 @@ addEventListener('storage', e => {
 
 // The array order is the column order, so moving means re-inserting before another task, or at the end when beforeId is null.
 function moveTask(id, status, beforeId) {
-  const task = tasks.find(t => t.id === id);
+  const task = tasks.find(byId(id));
   if (!task || id === beforeId) return;
   tasks.splice(tasks.indexOf(task), 1);
   task.status = status;
   // A target removed by another tab mid-drag yields -1, which falls back to the end.
-  const index = tasks.findIndex(t => t.id === beforeId);
+  const index = tasks.findIndex(byId(beforeId));
   tasks.splice(index === -1 ? tasks.length : index, 0, task);
 }
 
@@ -382,4 +389,4 @@ importFile.onchange = async () => {
 };
 
 render();
-storageFull.hidden = hasRoom(SMALLEST_TASK);
+storageToast.hidden = hasRoom(SMALLEST_TASK);
