@@ -80,11 +80,11 @@ const columns = STATUSES.map(([id, name]) => {
   board.insertAdjacentHTML('beforeend',
     `<section data-status="${id}"><h2>${name}<span></span></h2><div class="list"></div></section>`);
   const section = board.lastElementChild;
-  section.onclick = e => {
-    if (!e.target.closest('.task')) openDialog(null, id);
-  };
   fields.status.add(new Option(name, id));
   const column = { id, list: section.querySelector('.list'), counter: section.querySelector('span'), items: [], sizes: [], start: 0, end: 0 };
+  column.list.onclick = e => {
+    if (!e.target.closest('.task')) openDialog(null, id);
+  };
   column.list.onscroll = () => layout(column);
   return column;
 });
