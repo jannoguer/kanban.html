@@ -33,9 +33,9 @@
 <dialog>
   <form method="dialog">
     <h3></h3>
-    <label>Title <input name="title" required pattern=".*\S.*" autocomplete="off"></label>
-    <label>Description <textarea name="description"></textarea></label>
-    <label>Status <select name="status"></select></label>
+    <div class="field"><span id="title-label">Title</span><input name="title" aria-labelledby="title-label" required pattern=".*\S.*" autocomplete="off"></div>
+    <div class="field"><span id="description-label">Description</span><textarea name="description" aria-labelledby="description-label"></textarea></div>
+    <div class="field"><span id="status-label">Status</span><select name="status" aria-labelledby="status-label"></select></div>
     <div class="actions">
       <button type="button" class="danger" id="delete">Delete</button>
       <button class="primary">Save</button>
