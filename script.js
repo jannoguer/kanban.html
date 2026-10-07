@@ -14,6 +14,7 @@ const form = dialog.querySelector('form');
 const fields = form.elements;
 const deleteButton = document.getElementById('delete');
 const boardName = document.getElementById('board-name');
+const search = document.getElementById('search');
 // Carries data over from the old unprefixed keys, which are left in place since another local page may own them.
 for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   const old = localStorage.getItem(oldKey);
@@ -87,12 +88,31 @@ function createCard(task) {
 
 function render() {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+  const query = search.value.trim().toLowerCase();
+  // join() because imported tasks may lack a description.
+  const matches = t => [t.title, t.description].join('\n').toLowerCase().includes(query);
   for (const section of board.children) {
     const items = tasks.filter(t => t.status === section.dataset.status);
-    section.querySelector('span').textContent = items.length;
-    section.querySelector('.list').replaceChildren(...items.map(createCard));
+    const shown = items.filter(matches);
+    section.querySelector('span').textContent = query ? `${shown.length}/${items.length}` : items.length;
+    section.querySelector('.list').replaceChildren(...shown.map(createCard));
   }
 }
+
+search.oninput = render;
+search.onkeydown = e => {
+  if (e.key !== 'Escape') return;
+  search.value = '';
+  search.blur();
+  render();
+};
+document.addEventListener('keydown', e => {
+  if (dialog.open || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
+  if (e.key === '/') {
+    e.preventDefault();
+    search.focus();
+  }
+});
 
 function openDialog(task, status = 'backlog') {
   editingId = task?.id ?? null;
