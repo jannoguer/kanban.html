@@ -6,6 +6,7 @@ const TASKS_KEY = 'planning-board:tasks';
 const THEME_KEY = 'planning-board:theme';
 const NAME_KEY = 'planning-board:name';
 const DEFAULT_NAME = 'PLANNING BOARD';
+const DRAG_TYPE = 'application/x-planning-board-task';
 const root = document.documentElement;
 const board = document.querySelector('main');
 const dialog = document.querySelector('dialog');
@@ -67,8 +68,18 @@ function createCard(task) {
   el.innerHTML = '<strong></strong><p></p>';
   el.querySelector('strong').textContent = task.title;
   el.querySelector('p').textContent = task.description;
+  el.dataset.id = task.id;
   el.onclick = () => openDialog(task);
-  el.ondragstart = e => e.dataTransfer.setData('text/plain', task.id);
+  el.ondragstart = e => {
+    e.dataTransfer.setData(DRAG_TYPE, task.id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Deferred so the drag image is captured before the card is dimmed.
+    requestAnimationFrame(() => el.classList.add('dragging'));
+  };
+  el.ondragend = () => {
+    el.classList.remove('dragging');
+    marker.remove();
+  };
   return el;
 }
 
@@ -99,8 +110,12 @@ form.onsubmit = () => {
   };
   // Looked up by id because a sync from another tab replaces the task objects; a task deleted there is re-created.
   const task = tasks.find(t => t.id === editingId);
-  if (task) Object.assign(task, data);
-  else tasks.push({ id: crypto.randomUUID(), ...data });
+  if (task) {
+    if (task.status !== data.status) moveTask(task.id, data.status, null);
+    Object.assign(task, data);
+  } else {
+    tasks.push({ id: crypto.randomUUID(), ...data });
+  }
   render();
 };
 
@@ -129,14 +144,50 @@ addEventListener('storage', e => {
   }
 });
 
-board.ondragover = e => e.preventDefault();
+// The array order is the column order, so moving means re-inserting before another task, or at the end when beforeId is null.
+function moveTask(id, status, beforeId) {
+  const task = tasks.find(t => t.id === id);
+  if (!task || id === beforeId) return;
+  tasks.splice(tasks.indexOf(task), 1);
+  task.status = status;
+  // A target removed by another tab mid-drag yields -1, which falls back to the end.
+  const index = tasks.findIndex(t => t.id === beforeId);
+  tasks.splice(index === -1 ? tasks.length : index, 0, task);
+}
+
+function dropPoint(e) {
+  const list = e.target.closest('section')?.querySelector('.list');
+  if (!list) return null;
+  const before = [...list.querySelectorAll('.task:not(.dragging)')].find(card => {
+    const box = card.getBoundingClientRect();
+    return e.clientY < box.top + box.height / 2;
+  });
+  return { list, before: before ?? null };
+}
+
+const marker = document.createElement('div');
+marker.className = 'drop-marker';
+// Checked by type because the data itself is unreadable until drop; this also ignores dragged files and text.
+const isTaskDrag = e => e.dataTransfer.types.includes(DRAG_TYPE);
+
+board.ondragover = e => {
+  if (!isTaskDrag(e)) return;
+  e.preventDefault();
+  const point = dropPoint(e);
+  if (point) point.list.insertBefore(marker, point.before);
+  else marker.remove();
+};
+board.ondragleave = e => {
+  if (!board.contains(e.relatedTarget)) marker.remove();
+};
 board.ondrop = e => {
-  const section = e.target.closest('section');
-  const task = tasks.find(t => t.id === e.dataTransfer.getData('text/plain'));
-  if (section && task) {
-    task.status = section.dataset.status;
-    render();
-  }
+  if (!isTaskDrag(e)) return;
+  e.preventDefault();
+  marker.remove();
+  const point = dropPoint(e);
+  if (!point) return;
+  moveTask(e.dataTransfer.getData(DRAG_TYPE), point.list.parentElement.dataset.status, point.before?.dataset.id ?? null);
+  render();
 };
 
 document.getElementById('export').onclick = () => {

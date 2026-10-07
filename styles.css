@@ -74,6 +74,9 @@ section h2 {
 }
 .task p { margin-top: 4px; color: var(--muted); white-space: pre-wrap; }
 .task p:empty { display: none; }
+.task.dragging { opacity: .4; }
+/* Negative margins cancel its share of the list gap, so showing it never shifts the cards. */
+.drop-marker { flex-shrink: 0; height: 2px; margin: -5px 0; border-radius: 1px; background: var(--accent); }
 
 dialog {
   margin: auto; width: min(420px, calc(100% - 32px)); padding: 0;
