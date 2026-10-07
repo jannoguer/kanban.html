@@ -25,12 +25,15 @@ nav {
   padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface);
 }
 nav h1 { font-size: 16px; font-weight: 600; }
-nav div { display: flex; align-items: center; gap: 12px; }
+nav > div { display: flex; align-items: center; gap: 12px; }
 .icon {
   display: grid; place-items: center; width: 32px; height: 32px;
   border: 1px solid var(--line); border-radius: 8px;
 }
 .icon:hover { background: var(--bg); }
+.group { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.group .icon { height: 30px; border: 0; border-radius: 0; }
+.group .icon + .icon { border-left: 1px solid var(--line); }
 
 .switch {
   position: relative; display: flex; justify-content: space-between; align-items: center;

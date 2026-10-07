@@ -97,4 +97,37 @@ board.ondrop = e => {
   }
 };
 
+document.getElementById('export').onclick = () => {
+  const link = document.createElement('a');
+  link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(tasks, null, 2));
+  link.download = 'planning-board.json';
+  link.click();
+};
+
+function parseTasks(text) {
+  try {
+    const data = JSON.parse(text);
+    const isTask = t => typeof t?.id === 'string' && typeof t.title === 'string'
+      && STATUSES.some(([id]) => id === t.status);
+    return Array.isArray(data) && data.every(isTask) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+const importFile = document.getElementById('import-file');
+document.getElementById('import').onclick = () => importFile.click();
+importFile.onchange = async () => {
+  const imported = parseTasks(await importFile.files[0].text());
+  // Without the reset, picking the same file again fires no change event.
+  importFile.value = '';
+  if (!imported) {
+    alert('That file is not a planning board export.');
+    return;
+  }
+  if (tasks.length && !confirm(`Replace the ${tasks.length} current tasks with the ${imported.length} in the file?`)) return;
+  tasks = imported;
+  render();
+};
+
 render();
