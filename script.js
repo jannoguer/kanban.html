@@ -71,7 +71,7 @@ form.onsubmit = () => {
     status: fields.status.value,
   };
   if (editing) Object.assign(editing, data);
-  else tasks.push({ id: Date.now().toString(36), ...data });
+  else tasks.push({ id: crypto.randomUUID(), ...data });
   render();
 };
 
