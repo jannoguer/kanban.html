@@ -22,8 +22,12 @@ const storageFull = document.getElementById('storage-full');
 const SETTINGS_ROOM = NAME_KEY.length + boardName.maxLength + THEME_KEY.length + 'light'.length;
 // Storage counts as full when not even this would fit.
 const SMALLEST_TASK = JSON.stringify({ id: crypto.randomUUID(), title: 'x', description: '', status: STATUSES[0][0] }).length + 1;
-// Keyed by element because imported tasks may share an id.
-const cardTasks = new WeakMap();
+// Matches the .list gap in styles.css.
+const GAP = 8;
+// Keyed by text, so an edited card is measured again.
+const heights = new Map();
+// join() because imported tasks may lack a description.
+const textOf = t => [t.title, t.description].join('\n');
 // Carries data over from the old unprefixed keys, which are left in place since another local page may own them.
 for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   const old = localStorage.getItem(oldKey);
@@ -65,14 +69,18 @@ addEventListener('pagehide', () => {
   if (nameBeforeEdit !== null) saveName(boardName.value);
 });
 
-for (const [id, name] of STATUSES) {
+const columns = STATUSES.map(([id, name]) => {
   board.insertAdjacentHTML('beforeend',
     `<section data-status="${id}"><h2>${name}<span></span></h2><div class="list"></div></section>`);
-  board.lastElementChild.onclick = e => {
+  const section = board.lastElementChild;
+  section.onclick = e => {
     if (!e.target.closest('.task')) openDialog(null, id);
   };
   fields.status.add(new Option(name, id));
-}
+  const column = { id, list: section.querySelector('.list'), counter: section.querySelector('span'), items: [], sizes: [], start: 0, end: 0 };
+  column.list.onscroll = () => layout(column);
+  return column;
+});
 
 function createCard(task) {
   const el = document.createElement('article');
@@ -82,7 +90,6 @@ function createCard(task) {
   el.querySelector('strong').textContent = task.title;
   el.querySelector('p').textContent = task.description;
   el.dataset.id = task.id;
-  cardTasks.set(el, task);
   el.onclick = () => openDialog(task);
   el.ondragstart = e => {
     e.dataTransfer.setData(DRAG_TYPE, task.id);
@@ -97,29 +104,74 @@ function createCard(task) {
   return el;
 }
 
-function render() {
-  for (const section of board.children) {
-    const items = tasks.filter(t => t.status === section.dataset.status);
-    section.querySelector('.list').replaceChildren(...items.map(createCard));
+// Only the cards within a screen of the view are built; spacers stand in for the rest at their measured heights.
+function layout(column) {
+  const { list, items, sizes } = column;
+  const top = list.scrollTop - list.clientHeight;
+  const bottom = list.scrollTop + 2 * list.clientHeight;
+  let i = 0;
+  let above = 0;
+  while (i < items.length && above + sizes[i] < top) above += sizes[i++];
+  const start = i;
+  let y = above;
+  while (i < items.length && y < bottom) y += sizes[i++];
+  const end = i;
+  let below = 0;
+  while (i < items.length) below += sizes[i++];
+  // Live, and skips the drop marker.
+  const cards = list.getElementsByClassName('task');
+  if (start >= column.end || end <= column.start) {
+    list.replaceChildren(...items.slice(start, end).map(createCard));
+  } else {
+    // Only the edges change, so a card being dragged stays in place.
+    for (; column.start < start; column.start++) cards[0].remove();
+    for (; column.end > end; column.end--) cards[cards.length - 1].remove();
+    list.prepend(...items.slice(start, column.start).map(createCard));
+    list.append(...items.slice(column.end, end).map(createCard));
   }
-  applyFilter();
+  column.start = start;
+  column.end = end;
+  list.style.setProperty('--above', `${above}px`);
+  list.style.setProperty('--below', `${below}px`);
 }
 
-// Hides cards rather than rebuilding them, so typing stays fast on large boards.
-function applyFilter() {
+// Each new text is measured once, in its own column, after the built cards so the scroll position is untouched.
+function measureNew() {
+  const fresh = tasks.filter(t => !heights.has(textOf(t)));
+  const cards = fresh.map(createCard);
+  cards.forEach((card, i) => columns.find(c => c.id === fresh[i].status).list.append(card));
+  cards.forEach((card, i) => heights.set(textOf(fresh[i]), card.getBoundingClientRect().height));
+  cards.forEach(card => card.remove());
+}
+
+// A new search starts each column at the top; any other change keeps the scroll position.
+let lastQuery = '';
+function render() {
+  measureNew();
   const query = search.value.trim().toLowerCase();
-  // join() because imported tasks may lack a description.
-  const matches = t => [t.title, t.description].join('\n').toLowerCase().includes(query);
-  for (const section of board.children) {
-    const cards = section.querySelectorAll('.task');
-    let shown = 0;
-    for (const card of cards) {
-      card.hidden = !matches(cardTasks.get(card));
-      if (!card.hidden) shown++;
-    }
-    section.querySelector('span').textContent = query ? `${shown}/${cards.length}` : cards.length;
+  const newSearch = query !== lastQuery;
+  lastQuery = query;
+  const matches = t => textOf(t).toLowerCase().includes(query);
+  for (const column of columns) {
+    const all = tasks.filter(t => t.status === column.id);
+    column.items = query ? all.filter(matches) : all;
+    column.sizes = column.items.map(t => heights.get(textOf(t)) + GAP);
+    column.counter.textContent = query ? `${column.items.length}/${all.length}` : all.length;
+    column.start = column.end = 0;
+    if (newSearch) column.list.scrollTop = 0;
+    layout(column);
   }
 }
+
+// Wrapping follows the column width, so every card is measured again once resizing settles.
+let resizeTimer;
+addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    heights.clear();
+    render();
+  }, 150);
+});
 
 // False only when storage is full; any other failure is a real error.
 function store(key, value) {
@@ -149,12 +201,12 @@ function saveTasks() {
 }
 document.getElementById('storage-dismiss').onclick = () => { storageFull.hidden = true; };
 
-search.oninput = applyFilter;
+search.oninput = render;
 search.onkeydown = e => {
   if (e.key !== 'Escape') return;
   search.value = '';
   search.blur();
-  applyFilter();
+  render();
 };
 document.addEventListener('keydown', e => {
   if (dialog.open || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
@@ -264,7 +316,7 @@ function moveTask(id, status, beforeId) {
 function dropPoint(e) {
   const list = e.target.closest('section')?.querySelector('.list');
   if (!list) return null;
-  const before = [...list.querySelectorAll('.task:not(.dragging, [hidden])')].find(card => {
+  const before = [...list.querySelectorAll('.task:not(.dragging)')].find(card => {
     const box = card.getBoundingClientRect();
     return e.clientY < box.top + box.height / 2;
   });

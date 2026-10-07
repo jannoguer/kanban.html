@@ -68,7 +68,11 @@ section h2 {
   font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); border-bottom: 2px solid var(--accent);
 }
-.list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+/* The stable gutter keeps cards the same width with or without a scrollbar, so measured heights hold. */
+.list { flex: 1; overflow-y: auto; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+/* Stand in for the cards outside the built window; the negative margins cancel their gaps. */
+.list::before { content: ''; flex-shrink: 0; height: var(--above, 0px); margin-bottom: -8px; }
+.list::after { content: ''; flex-shrink: 0; height: var(--below, 0px); margin-top: -8px; }
 .task {
   padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px; cursor: pointer;
   background: color-mix(in srgb, var(--accent) 16%, var(--surface)); overflow-wrap: anywhere;
