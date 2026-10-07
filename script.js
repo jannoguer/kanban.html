@@ -57,11 +57,12 @@ addEventListener('pagehide', () => {
   if (nameBeforeEdit !== null) saveName(boardName.value);
 });
 
-const PLUS_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 for (const [id, name] of STATUSES) {
   board.insertAdjacentHTML('beforeend',
-    `<section data-status="${id}"><h2>${name}<span></span><button aria-label="Add task to ${name}">${PLUS_ICON}</button></h2><div class="list"></div></section>`);
-  board.lastElementChild.querySelector('button').onclick = () => openDialog(null, id);
+    `<section data-status="${id}"><h2>${name}<span></span></h2><div class="list"></div></section>`);
+  board.lastElementChild.onclick = e => {
+    if (!e.target.closest('.task')) openDialog(null, id);
+  };
   fields.status.add(new Option(name, id));
 }
 
