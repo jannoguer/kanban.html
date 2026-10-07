@@ -63,10 +63,13 @@ main {
 section { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
 section:last-child { border-right: 0; }
 section h2 {
-  display: flex; justify-content: space-between; padding: 12px;
+  display: flex; align-items: center; gap: 6px; padding: 12px;
   font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted); border-bottom: 2px solid var(--accent);
 }
+section h2 span { margin-left: auto; }
+section h2 button { display: grid; place-items: center; width: 20px; height: 20px; margin: -4px -4px -4px 0; border-radius: 4px; }
+section h2 button:hover { color: var(--fg); background: var(--bg); }
 .list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
 .task {
   padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px; cursor: pointer;
