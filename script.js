@@ -154,9 +154,10 @@ form.onsubmit = () => {
 
 document.getElementById('add').onclick = () => openDialog(null);
 document.getElementById('cancel').onclick = () => dialog.close();
-let toastTimer;
+// The bar's animation is the timer, so the bar and the hide can never drift apart.
+let countdown;
 function hideToast() {
-  clearTimeout(toastTimer);
+  countdown?.cancel();
   toast.hidden = true;
 }
 deleteButton.onclick = () => {
@@ -170,9 +171,10 @@ deleteButton.onclick = () => {
       hideToast();
       render();
     };
-    clearTimeout(toastTimer);
+    countdown?.cancel();
     toast.hidden = false;
-    toastTimer = setTimeout(hideToast, 5000);
+    countdown = toast.querySelector('.countdown').animate([{ scale: '1 1' }, { scale: '0 1' }], 5000);
+    countdown.onfinish = hideToast;
   }
   dialog.close();
   render();
