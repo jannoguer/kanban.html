@@ -4,12 +4,15 @@ const STATUSES = [
 ];
 const TASKS_KEY = 'planning-board:tasks';
 const THEME_KEY = 'planning-board:theme';
+const NAME_KEY = 'planning-board:name';
+const DEFAULT_NAME = 'PLANNING BOARD';
 const root = document.documentElement;
 const board = document.querySelector('main');
 const dialog = document.querySelector('dialog');
 const form = dialog.querySelector('form');
 const fields = form.elements;
 const deleteButton = document.getElementById('delete');
+const boardName = document.getElementById('board-name');
 // Carries data over from the old unprefixed keys, which are left in place since another local page may own them.
 for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   const old = localStorage.getItem(oldKey);
@@ -26,6 +29,30 @@ document.getElementById('theme').onclick = e => {
   root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem(THEME_KEY, root.dataset.theme);
 };
+
+function saveName(value) {
+  const name = value.trim() || DEFAULT_NAME;
+  document.title = name;
+  localStorage.setItem(NAME_KEY, name);
+  return name;
+}
+
+// Null when not editing. Tracked by focus/blur because activeElement stays set while the tab is in the background.
+let nameBeforeEdit = null;
+boardName.value = document.title = localStorage.getItem(NAME_KEY) || DEFAULT_NAME;
+boardName.onfocus = () => { nameBeforeEdit = boardName.value; };
+boardName.onblur = () => {
+  boardName.value = saveName(boardName.value);
+  nameBeforeEdit = null;
+};
+boardName.onkeydown = e => {
+  if (e.key === 'Escape') boardName.value = nameBeforeEdit;
+  if (e.key === 'Enter' || e.key === 'Escape') boardName.blur();
+};
+// Closing or reloading mid-edit fires no blur, so the edit is committed here.
+addEventListener('pagehide', () => {
+  if (nameBeforeEdit !== null) saveName(boardName.value);
+});
 
 for (const [id, name] of STATUSES) {
   board.insertAdjacentHTML('beforeend',
@@ -96,6 +123,9 @@ addEventListener('storage', e => {
     render();
   } else if (e.key === THEME_KEY && e.newValue) {
     root.dataset.theme = e.newValue;
+  } else if (e.key === NAME_KEY && e.newValue && nameBeforeEdit === null) {
+    // An edit in progress here is left alone; it saves its own value when it finishes.
+    boardName.value = document.title = e.newValue;
   }
 });
 
