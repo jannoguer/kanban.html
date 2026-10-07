@@ -61,7 +61,7 @@ main {
   flex: 1; min-height: 0; overflow-x: auto;
   display: grid; grid-template-columns: repeat(6, minmax(180px, 1fr));
 }
-section { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); cursor: pointer; }
+section { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
 section:last-child { border-right: 0; }
 section h2 {
   display: flex; justify-content: space-between; padding: 12px;
