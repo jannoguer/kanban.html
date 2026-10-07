@@ -86,6 +86,8 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
 form { display: flex; flex-direction: column; gap: 12px; padding: 30px; }
 form h3 { font-size: 16px; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+/* Empty alt text: screen readers already announce required. */
+.field:has(:required) > span::after { content: " *" / ""; color: #ef4444; }
 input, textarea, select {
   font: inherit; color: var(--fg); background: var(--bg);
   padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
