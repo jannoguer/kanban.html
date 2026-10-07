@@ -16,7 +16,7 @@ for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
   if (old !== null && localStorage.getItem(newKey) === null) localStorage.setItem(newKey, old);
 }
 let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
-let editing = null;
+let editingId = null;
 
 root.dataset.theme = localStorage.getItem(THEME_KEY)
   || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -55,7 +55,7 @@ function render() {
 }
 
 function openDialog(task) {
-  editing = task;
+  editingId = task?.id ?? null;
   dialog.querySelector('h3').textContent = task ? 'Edit task' : 'New task';
   fields.title.value = task?.title ?? '';
   fields.description.value = task?.description ?? '';
@@ -70,7 +70,9 @@ form.onsubmit = () => {
     description: fields.description.value.trim(),
     status: fields.status.value,
   };
-  if (editing) Object.assign(editing, data);
+  // Looked up by id because a sync from another tab replaces the task objects; a task deleted there is re-created.
+  const task = tasks.find(t => t.id === editingId);
+  if (task) Object.assign(task, data);
   else tasks.push({ id: crypto.randomUUID(), ...data });
   render();
 };
@@ -78,7 +80,7 @@ form.onsubmit = () => {
 document.getElementById('add').onclick = () => openDialog(null);
 document.getElementById('cancel').onclick = () => dialog.close();
 deleteButton.onclick = () => {
-  tasks = tasks.filter(t => t !== editing);
+  tasks = tasks.filter(t => t.id !== editingId);
   dialog.close();
   render();
 };
@@ -86,6 +88,16 @@ deleteButton.onclick = () => {
 dialog.onclick = e => {
   if (e.target === dialog) dialog.close();
 };
+
+// Fires only in other tabs; render() writing back the same value raises no further event.
+addEventListener('storage', e => {
+  if (e.key === TASKS_KEY) {
+    tasks = JSON.parse(e.newValue || '[]');
+    render();
+  } else if (e.key === THEME_KEY && e.newValue) {
+    root.dataset.theme = e.newValue;
+  }
+});
 
 board.ondragover = e => e.preventDefault();
 board.ondrop = e => {
