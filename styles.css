@@ -142,6 +142,9 @@ kbd {
   box-shadow: 0 4px 16px rgb(0 0 0 / .15);
 }
 #pointer-hint { padding-right: 16px; }
+/* Fading out needs the toast kept displayed until the opacity is gone. */
+.toast { transition: opacity .25s, display .25s allow-discrete; }
+.toast[hidden] { opacity: 0; }
 .warning:not([hidden]) { gap: 8px; color: #fee2e2; background: #450a0a; border-color: var(--danger); }
 .warning strong { color: #fff; }
 .warning .dismiss { padding: 4px; border: 0; color: #fca5a5; }
