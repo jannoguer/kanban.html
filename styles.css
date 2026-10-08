@@ -66,17 +66,17 @@ section:last-child { border-right: 0; }
 section h2, #help h4 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 section h2 { display: flex; justify-content: space-between; padding: 12px; border-bottom: 2px solid var(--accent); }
 .list { flex: 1; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
-/* Fog stands in for the scrollbar: it fades the edge that hides cards. A column that does not scroll has no timeline, so both stay 0 and nothing fades. */
+/* Fog stands in for the scrollbar: it fades the edge that hides content. A box that does not scroll has no timeline, so both stay 0 and nothing fades. */
 @property --fog-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @property --fog-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @supports (animation-timeline: scroll()) {
-  .list {
+  .list, #help {
     --fog: 40px;
     mask: linear-gradient(transparent, #000 var(--fog-top), #000 calc(100% - var(--fog-bottom)), transparent);
     animation: fog-top linear both, fog-bottom linear both;
     animation-timeline: scroll(self);
     animation-range: 0% var(--fog), calc(100% - var(--fog)) 100%;
-    /* Keeps a focused card clear of the fog when focusing scrolls it into view. */
+    /* Keeps a focused element clear of the fog when focusing scrolls it into view. */
     scroll-padding-block: var(--fog);
   }
   @keyframes fog-top { to { --fog-top: var(--fog); } }
@@ -118,9 +118,15 @@ textarea { resize: vertical; min-height: 120px; scrollbar-width: none; }
 .primary:focus-visible { outline: 2px solid var(--surface); outline-offset: -4px; }
 .danger { color: var(--danger); }
 #help-button { font-weight: 600; }
-#help { width: min(520px, calc(100% - 32px)); }
-/* Focused on open so the help starts at the top, not scrolled to the Close button; it is not a control, so it gets no ring. */
-#help-title:focus { outline: none; }
+/* The dialog is a clear full-screen scroller and the form is the card, so the whole card scrolls past the screen edges. */
+#help { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 16px; border: 0; background: none; }
+#help[open] { display: grid; }
+/* Nothing in the help is a control, so the dialog itself takes the focus, and a ring around the screen means nothing. */
+#help:focus-visible { outline: none; }
+#help form {
+  width: min(520px, 100%); margin: auto;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+}
 #help h4 { margin-top: 6px; }
 #help ul { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
 #help td { padding: 3px 0; vertical-align: top; }
