@@ -19,10 +19,6 @@ const storageToast = document.getElementById('storage-full');
 const SETTINGS_ROOM = THEME_KEY.length + 'light'.length;
 // Storage counts as full when not even this would fit.
 const SMALLEST_TASK = JSON.stringify({ id: crypto.randomUUID(), title: 'x', description: '', status: DEFAULT_STATUS }).length + 1;
-// Matches the .list gap in styles.css.
-const GAP = 8;
-// Keyed by text, so an edited card is measured again.
-const heights = new Map();
 // join() because imported tasks may lack a description.
 const textOf = t => [t.title, t.description].join('\n');
 const byId = id => x => x.id === id;
@@ -71,9 +67,7 @@ const columns = STATUSES.map(([id, name]) => {
     `<section data-status="${id}"><h2>${name}<span></span></h2><div class="list"></div></section>`);
   const section = board.lastElementChild;
   fields.status.add(new Option(name, id));
-  const column = { id, list: section.querySelector('.list'), counter: section.querySelector('span'), items: [], sizes: [], start: 0, end: 0 };
-  column.list.onscroll = () => layout(column);
-  return column;
+  return { id, list: section.querySelector('.list'), counter: section.querySelector('span'), items: [] };
 });
 
 // Marks every match of the search; empty slices are skipped so an empty description still matches :empty.
@@ -101,51 +95,12 @@ function createCard(task) {
   return el;
 }
 
-// Only the cards within a screen of the view are built; spacers stand in for the rest at their measured heights.
-function layout(column) {
-  const { list, items, sizes } = column;
-  const top = list.scrollTop - list.clientHeight;
-  const bottom = list.scrollTop + 2 * list.clientHeight;
-  let i = 0;
-  let above = 0;
-  while (i < items.length && above + sizes[i] < top) above += sizes[i++];
-  const start = i;
-  let y = above;
-  while (i < items.length && y < bottom) y += sizes[i++];
-  const end = i;
-  let below = 0;
-  while (i < items.length) below += sizes[i++];
-  if (start >= column.end || end <= column.start) {
-    list.replaceChildren(...items.slice(start, end).map(createCard));
-  } else {
-    const cards = list.children;
-    for (; column.start < start; column.start++) cards[0].remove();
-    for (; column.end > end; column.end--) cards[cards.length - 1].remove();
-    list.prepend(...items.slice(start, column.start).map(createCard));
-    list.append(...items.slice(column.end, end).map(createCard));
-  }
-  column.start = start;
-  column.end = end;
-  list.style.setProperty('--above', `${above}px`);
-  list.style.setProperty('--below', `${below}px`);
-}
-
-// Each new text is measured once, in its own column, after the built cards so the scroll position is untouched.
-function measureNew() {
-  const fresh = tasks.filter(t => !heights.has(textOf(t)));
-  const cards = fresh.map(createCard);
-  cards.forEach((card, i) => columns.find(byId(fresh[i].status)).list.append(card));
-  cards.forEach((card, i) => heights.set(textOf(fresh[i]), card.getBoundingClientRect().height));
-  cards.forEach(card => card.remove());
-}
-
 // A new search starts each column at the top; any other change keeps the scroll position.
 let lastQuery = '';
 let pattern = null;
 function render() {
   // Rebuilding the cards drops focus, so it is carried over by id.
   const focusedId = board.contains(document.activeElement) ? document.activeElement.dataset.id : undefined;
-  measureNew();
   const query = search.value.trim().toLowerCase();
   const newSearch = query !== lastQuery;
   lastQuery = query;
@@ -154,37 +109,19 @@ function render() {
   for (const column of columns) {
     const all = tasks.filter(t => t.status === column.id);
     column.items = query ? all.filter(matches) : all;
-    column.sizes = column.items.map(t => heights.get(textOf(t)) + GAP);
     column.counter.textContent = query ? `${column.items.length}/${all.length}` : all.length;
-    column.start = column.end = 0;
+    column.list.replaceChildren(...column.items.map(createCard));
     if (newSearch) column.list.scrollTop = 0;
-    layout(column);
   }
   if (focusedId) focusTask(focusedId);
 }
 
-// A task outside the built window is scrolled to first, so its card exists.
 function focusTask(id) {
   const task = tasks.find(byId(id));
   const column = task && columns.find(byId(task.status));
   const index = column ? column.items.indexOf(task) : -1;
-  if (index === -1) return;
-  if (index < column.start || index >= column.end) {
-    column.list.scrollTop = column.sizes.slice(0, index).reduce((a, b) => a + b, 0);
-    layout(column);
-  }
-  column.list.children[index - column.start].focus();
+  if (index !== -1) column.list.children[index].focus();
 }
-
-// Wrapping follows the column width, so every card is measured again once resizing settles.
-let resizeTimer;
-addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    heights.clear();
-    render();
-  }, 150);
-});
 
 // False only when storage is full; any other failure is a real error.
 function store(key, value) {

@@ -89,16 +89,13 @@ section h2 { display: flex; justify-content: space-between; padding: 12px; borde
   @keyframes fog-top { to { --fog-top: var(--fog); } }
   @keyframes fog-bottom { from { --fog-bottom: var(--fog); } }
 }
-/* Stand in for the cards outside the built window; the negative margins cancel their gaps. */
-.list::before { content: ''; flex-shrink: 0; height: var(--above, 0px); margin-bottom: -8px; }
-.list::after { content: ''; flex-shrink: 0; height: var(--below, 0px); margin-top: -8px; }
 .task {
   padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 16%, var(--surface)); overflow-wrap: anywhere;
 }
 .task p { margin-top: 4px; color: var(--muted); white-space: pre-wrap; }
 .task p:empty { display: none; }
-/* A stronger wash of the column's own tint, so it reads as part of the card in both themes; no padding, so the measured heights hold. */
+/* A stronger wash of the column's own tint, so it reads as part of the card in both themes. */
 .task mark { background: color-mix(in srgb, var(--accent) 40%, transparent); color: inherit; border-radius: 2px; }
 .task:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 
