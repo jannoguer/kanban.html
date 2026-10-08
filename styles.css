@@ -15,8 +15,6 @@
 [data-status="cancelled"] { --accent: var(--danger); }
 
 *, ::before, ::after { box-sizing: border-box; margin: 0; }
-/* Keyboard only: the pointer hits nothing, so no click, hover, drag, scroll or focus reaches the page. */
-:root, ::backdrop { pointer-events: none; }
 body {
   height: 100vh; display: flex; flex-direction: column;
   font: 14px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--fg);

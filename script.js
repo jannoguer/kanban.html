@@ -35,15 +35,25 @@ for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
 let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
 let editingId = null;
 
-// The CSS leaves the pointer only the root, but pressing there would still drop the focus or open a menu; the hint says why nothing happens.
+// Keyboard only, but the pointer may still select text: presses on controls neither focus them nor open a select, clicks do nothing, and the wheel does not scroll.
 const pointerHint = document.getElementById('pointer-hint');
 let hintTimer;
-for (const type of ['mousedown', 'contextmenu']) addEventListener(type, e => {
+let pressedAt;
+addEventListener('mousedown', e => {
+  pressedAt = [e.clientX, e.clientY];
+  if (e.target.closest('button, select')) e.preventDefault();
+});
+// A click from Enter or Space has no click count, so the keyboard still activates buttons; a click that ends a drag is a selection, so it stays quiet.
+addEventListener('click', e => {
+  if (!e.detail) return;
   e.preventDefault();
+  e.stopImmediatePropagation();
+  if (Math.hypot(e.clientX - pressedAt[0], e.clientY - pressedAt[1]) > 3) return;
   pointerHint.hidden = false;
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => { pointerHint.hidden = true; }, 3000);
-});
+}, true);
+addEventListener('wheel', e => e.preventDefault(), { passive: false });
 
 root.dataset.theme = localStorage.getItem(THEME_KEY)
   || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
