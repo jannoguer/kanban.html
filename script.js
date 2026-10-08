@@ -231,7 +231,7 @@ function focusFirst() {
 const hasModifier = e => e.ctrlKey || e.metaKey || e.altKey;
 const typesHere = e => e.target.matches('input, textarea, select');
 const actions = {
-  '/': () => search.focus(),
+  f: () => search.focus(),
   '?': openHelp,
   q: () => document.activeElement.blur(),
   n: () => openDialog(null),
