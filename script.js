@@ -93,6 +93,7 @@ function createCard(task) {
   const el = document.createElement('article');
   el.className = 'task';
   el.draggable = true;
+  el.tabIndex = 0;
   el.innerHTML = '<strong></strong><p></p>';
   el.querySelector('strong').textContent = task.title;
   el.querySelector('p').textContent = task.description;
@@ -154,6 +155,8 @@ function measureNew() {
 // A new search starts each column at the top; any other change keeps the scroll position.
 let lastQuery = '';
 function render() {
+  // Rebuilding the cards drops focus, so it is carried over by id.
+  const focusedId = board.contains(document.activeElement) ? document.activeElement.dataset.id : undefined;
   measureNew();
   const query = search.value.trim().toLowerCase();
   const newSearch = query !== lastQuery;
@@ -168,6 +171,20 @@ function render() {
     if (newSearch) column.list.scrollTop = 0;
     layout(column);
   }
+  if (focusedId) focusTask(focusedId);
+}
+
+// A task outside the built window is scrolled to first, so its card exists.
+function focusTask(id) {
+  const task = tasks.find(byId(id));
+  const column = task && columns.find(byId(task.status));
+  const index = column ? column.items.indexOf(task) : -1;
+  if (index === -1) return;
+  if (index < column.start || index >= column.end) {
+    column.list.scrollTop = column.sizes.slice(0, index).reduce((a, b) => a + b, 0);
+    layout(column);
+  }
+  column.list.getElementsByClassName('task')[index - column.start].focus();
 }
 
 // Wrapping follows the column width, so every card is measured again once resizing settles.
@@ -223,8 +240,51 @@ document.addEventListener('keydown', e => {
   } else if (e.key.toLowerCase() === 'n') {
     e.preventDefault();
     openDialog(null);
+  } else if (e.key in STEPS && e.target === document.body) {
+    e.preventDefault();
+    const first = columns.find(c => c.items.length)?.items[0];
+    if (first) focusTask(first.id);
   }
 });
+
+const STEPS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+// Arrows move focus between cards; with Shift they move the focused task instead.
+board.onkeydown = e => {
+  const card = e.target.closest('.task');
+  if (!card || e.ctrlKey || e.metaKey || e.altKey) return;
+  const task = tasks.find(byId(card.dataset.id));
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    openDialog(task);
+    return;
+  }
+  if (!(e.key in STEPS)) return;
+  e.preventDefault();
+  const [dx, dy] = STEPS[e.key];
+  const c = columns.findIndex(byId(task.status));
+  const { items } = columns[c];
+  const i = items.indexOf(task);
+  if (e.shiftKey) {
+    if (dx) {
+      const target = columns[c + dx];
+      if (!target) return;
+      moveTask(task.id, target.id, target.items[i]?.id ?? null);
+    } else {
+      if (!items[i + dy]) return;
+      // Moving down means landing before the task after the next one.
+      moveTask(task.id, task.status, items[i + (dy < 0 ? -1 : 2)]?.id ?? null);
+    }
+    saveTasks();
+  } else if (dx) {
+    // Empty columns are skipped; the row is kept where the next column is long enough.
+    for (let n = c + dx; columns[n]; n += dx) {
+      const next = columns[n].items;
+      if (next.length) return focusTask(next[Math.min(i, next.length - 1)].id);
+    }
+  } else if (items[i + dy]) {
+    focusTask(items[i + dy].id);
+  }
+};
 
 function openDialog(task, status = DEFAULT_STATUS) {
   editingId = task?.id ?? null;
@@ -291,9 +351,11 @@ deleteButton.onclick = () => {
 dialog.onclick = e => {
   if (e.target === dialog) dialog.close();
 };
-// Opened from the body (a card click or a shortcut), there is no focus to restore, so it would stay on a hidden field and block the shortcuts.
+// Opened by a shortcut, there is no focus to restore, so it would stay on a hidden field and block the shortcuts.
+// Saving rebuilds the cards, so focus goes back to the edited task by id.
 dialog.onclose = () => {
   if (dialog.contains(document.activeElement)) document.activeElement.blur();
+  if (editingId) focusTask(editingId);
 };
 
 // Fires only in other tabs, which have already saved the change.

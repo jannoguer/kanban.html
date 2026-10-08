@@ -80,6 +80,7 @@ section h2 {
 }
 .task p { margin-top: 4px; color: var(--muted); white-space: pre-wrap; }
 .task p:empty { display: none; }
+.task:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 .task.dragging { opacity: .4; }
 /* Negative margins cancel its share of the list gap, so showing it never shifts the cards. */
 .drop-marker { flex-shrink: 0; height: 2px; margin: -5px 0; border-radius: 1px; background: var(--accent); }
