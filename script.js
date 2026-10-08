@@ -71,7 +71,7 @@ const columns = STATUSES.map(([id, name]) => {
 });
 
 // Marks every match of the search; empty slices are skipped so an empty description still matches :empty.
-function setText(el, text) {
+function setText(el, text, pattern) {
   el.replaceChildren();
   let i = 0;
   for (const m of pattern ? text.matchAll(pattern) : []) {
@@ -84,43 +84,44 @@ function setText(el, text) {
   if (i < text.length) el.append(text.slice(i));
 }
 
-function createCard(task) {
+function createCard(task, pattern) {
   const el = document.createElement('article');
   el.className = 'task';
   el.tabIndex = 0;
   el.innerHTML = '<strong></strong><p></p>';
-  setText(el.querySelector('strong'), task.title);
-  setText(el.querySelector('p'), task.description ?? '');
+  setText(el.querySelector('strong'), task.title, pattern);
+  setText(el.querySelector('p'), task.description ?? '', pattern);
   el.dataset.id = task.id;
   return el;
 }
 
+const sameItems = (a, b) => a.length === b.length && a.every((t, i) => t === b[i]);
 // A new search starts each column at the top; any other change keeps the scroll position.
 let lastQuery = '';
-let pattern = null;
 function render() {
   // Rebuilding the cards drops focus, so it is carried over by id.
   const focusedId = board.contains(document.activeElement) ? document.activeElement.dataset.id : undefined;
   const query = search.value.trim().toLowerCase();
   const newSearch = query !== lastQuery;
   lastQuery = query;
-  pattern = query && new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  const pattern = query && new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
   const matches = t => textOf(t).search(pattern) !== -1;
+  const byStatus = Map.groupBy(tasks, t => t.status);
   for (const column of columns) {
-    const all = tasks.filter(t => t.status === column.id);
-    column.items = query ? all.filter(matches) : all;
-    column.counter.textContent = query ? `${column.items.length}/${all.length}` : all.length;
-    column.list.replaceChildren(...column.items.map(createCard));
+    const all = byStatus.get(column.id) ?? [];
+    const items = query ? all.filter(matches) : all;
+    column.counter.textContent = query ? `${items.length}/${all.length}` : all.length;
+    // An edit replaces the task object, so a column with the same objects in the same order has nothing new to show.
+    if (newSearch || !sameItems(items, column.items)) column.list.replaceChildren(...items.map(t => createCard(t, pattern)));
+    column.items = items;
     if (newSearch) column.list.scrollTop = 0;
   }
   if (focusedId) focusTask(focusedId);
 }
 
+// A task hidden by the search has no card, so nothing happens.
 function focusTask(id) {
-  const task = tasks.find(byId(id));
-  const column = task && columns.find(byId(task.status));
-  const index = column ? column.items.indexOf(task) : -1;
-  if (index !== -1) column.list.children[index].focus();
+  board.querySelector(`[data-id="${CSS.escape(id)}"]`)?.focus();
 }
 
 // False only when storage is full; any other failure is a real error.
@@ -134,7 +135,7 @@ function store(key, value) {
   }
 }
 
-// The extra room keeps the board name and theme saveable, as an export cannot bring them back.
+// The extra room keeps the theme saveable, as an export cannot bring it back.
 function hasRoom(chars) {
   const fits = store(ROOM_KEY, 'x'.repeat(chars + SETTINGS_ROOM));
   localStorage.removeItem(ROOM_KEY);
@@ -238,50 +239,56 @@ board.onkeydown = e => {
   const card = e.target.closest('.task');
   if (!card || hasModifier(e)) return;
   const task = tasks.find(byId(card.dataset.id));
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    openDialog(task);
-    return;
-  }
-  // No confirmation: U brings the task back. The focus moves on to a neighbour so D can be pressed again.
-  if (e.key.toLowerCase() === 'd') {
-    const { items } = columns.find(byId(task.status));
-    const i = items.indexOf(task);
-    const next = items[i + 1] ?? items[i - 1];
-    tasks = tasks.filter(t => t !== task);
-    saveTasks();
-    if (next) focusTask(next.id);
-    return;
-  }
-  if (!stepOf(e)) return;
+  const step = stepOf(e);
+  if (e.key === 'Enter') openDialog(task);
+  else if (e.key.toLowerCase() === 'd') deleteTask(task);
+  else if (step && holdingG) moveFocusedTask(task, ...step);
+  else if (step) moveFocus(card, ...step);
+  else return;
   e.preventDefault();
-  const [dx, dy] = stepOf(e);
+};
+
+// No confirmation: U brings the task back. The focus moves on to a neighbour so D can be pressed again.
+function deleteTask(task) {
+  const { items } = columns.find(byId(task.status));
+  const i = items.indexOf(task);
+  const next = items[i + 1] ?? items[i - 1];
+  tasks = tasks.filter(t => t !== task);
+  saveTasks();
+  if (next) focusTask(next.id);
+}
+
+function moveFocusedTask(task, dx, dy) {
   const c = columns.findIndex(byId(task.status));
   const { items } = columns[c];
   const i = items.indexOf(task);
-  if (holdingG) {
-    if (dx) {
-      const target = columns[c + dx];
-      if (!target) return;
-      moveTask(task.id, target.id, target.items[i]?.id ?? null);
-    } else {
-      if (!items[i + dy]) return;
-      // Moving down means landing before the task after the next one.
-      moveTask(task.id, task.status, items[i + (dy < 0 ? -1 : 2)]?.id ?? null);
-    }
-    saveTasks();
-  } else if (dx) {
-    // Empty columns are skipped.
+  if (dx) {
+    const target = columns[c + dx];
+    if (!target) return;
+    moveTask(task.id, target.id, target.items[i]?.id ?? null);
+  } else {
+    if (!items[i + dy]) return;
+    // Moving down means landing before the task after the next one.
+    moveTask(task.id, task.status, items[i + (dy < 0 ? -1 : 2)]?.id ?? null);
+  }
+  saveTasks();
+}
+
+// Up past the first card reaches the toolbar; left and right skip empty columns.
+function moveFocus(card, dx, dy) {
+  const list = card.parentElement;
+  if (dy > 0) {
+    card.nextElementSibling?.focus();
+  } else if (dy < 0) {
+    (card.previousElementSibling ?? nearestTo(centerX(list), toolbar, centerX)).focus();
+  } else {
+    const c = columns.findIndex(col => col.list === list);
     for (let n = c + dx; columns[n]; n += dx) {
       const cards = [...columns[n].list.children];
       if (cards.length) return nearestTo(centerY(card), cards, centerY).focus();
     }
-  } else if (items[i + dy]) {
-    focusTask(items[i + dy].id);
-  } else if (dy < 0) {
-    nearestTo(centerX(columns[c].list), toolbar, centerX).focus();
   }
-};
+}
 
 function openDialog(task) {
   editingId = task?.id ?? null;
@@ -332,7 +339,8 @@ form.onsubmit = () => {
   const task = tasks.find(byId(editingId));
   if (task) {
     if (task.status !== data.status) moveTask(task.id, data.status, null);
-    Object.assign(task, data);
+    // A new object, so render() sees the column as changed.
+    tasks[tasks.indexOf(task)] = { ...task, ...data };
   } else {
     tasks.push({ id: crypto.randomUUID(), ...data });
   }
