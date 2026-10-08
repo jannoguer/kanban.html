@@ -267,7 +267,11 @@ function focusFirst() {
 const hasModifier = e => e.ctrlKey || e.metaKey || e.altKey;
 document.addEventListener('keydown', e => {
   if (anyOpen()) return;
-  if (e.key === 'Escape') return e.target.blur();
+  if (e.key === 'Escape') {
+    // Without this a search input empties itself natively, leaving the field blank while the filter stays.
+    e.preventDefault();
+    return e.target.blur();
+  }
   if (hasModifier(e) || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
     e.preventDefault();
