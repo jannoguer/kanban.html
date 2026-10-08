@@ -68,8 +68,10 @@ boardName.onblur = () => {
   boardName.value = saveName(boardName.value);
   nameBeforeEdit = null;
 };
+// Esc reverts here; the document handler then drops the focus, which saves the restored value.
 boardName.onkeydown = e => {
   if (e.key === 'Enter') boardName.blur();
+  if (e.key === 'Escape') boardName.value = nameBeforeEdit;
 };
 // Closing or reloading mid-edit fires no blur, so the edit is committed here.
 addEventListener('pagehide', () => {
@@ -261,17 +263,11 @@ function focusFirst() {
   if (first) focusTask(first.id);
   return Boolean(first);
 }
-// Esc drops the focus; a board name edit is also reverted.
-function escape() {
-  const el = document.activeElement;
-  if (el === boardName) boardName.value = nameBeforeEdit;
-  el.blur();
-}
 // Shift is left out: it types ? and moves tasks.
 const hasModifier = e => e.ctrlKey || e.metaKey || e.altKey;
 document.addEventListener('keydown', e => {
   if (anyOpen()) return;
-  if (e.key === 'Escape') return escape();
+  if (e.key === 'Escape') return e.target.blur();
   if (hasModifier(e) || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
     e.preventDefault();
