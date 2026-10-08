@@ -58,15 +58,30 @@ nav > div { display: flex; align-items: center; gap: 12px; }
 [data-theme="light"] .switch .sun, [data-theme="dark"] .switch .moon { color: var(--fg); }
 
 main {
-  flex: 1; min-height: 0; overflow-x: auto;
+  flex: 1; min-height: 0; overflow-x: auto; scrollbar-width: none;
   display: grid; grid-template-columns: repeat(6, minmax(180px, 1fr));
 }
 section { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
 section:last-child { border-right: 0; }
 section h2, #help h4 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 section h2 { display: flex; justify-content: space-between; padding: 12px; border-bottom: 2px solid var(--accent); }
-/* The stable gutter keeps cards the same width with or without a scrollbar, so measured heights hold. */
-.list { flex: 1; overflow-y: auto; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.list { flex: 1; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+/* Fog stands in for the scrollbar: it fades the edge that hides cards. A column that does not scroll has no timeline, so both stay 0 and nothing fades. */
+@property --fog-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --fog-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@supports (animation-timeline: scroll()) {
+  .list {
+    --fog: 40px;
+    mask: linear-gradient(transparent, #000 var(--fog-top), #000 calc(100% - var(--fog-bottom)), transparent);
+    animation: fog-top linear both, fog-bottom linear both;
+    animation-timeline: scroll(self);
+    animation-range: 0% var(--fog), calc(100% - var(--fog)) 100%;
+    /* Keeps a focused card clear of the fog when focusing scrolls it into view. */
+    scroll-padding-block: var(--fog);
+  }
+  @keyframes fog-top { to { --fog-top: var(--fog); } }
+  @keyframes fog-bottom { from { --fog-bottom: var(--fog); } }
+}
 /* Stand in for the cards outside the built window; the negative margins cancel their gaps. */
 .list::before { content: ''; flex-shrink: 0; height: var(--above, 0px); margin-bottom: -8px; }
 .list::after { content: ''; flex-shrink: 0; height: var(--below, 0px); margin-top: -8px; }
