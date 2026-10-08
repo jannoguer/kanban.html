@@ -228,11 +228,18 @@ document.getElementById('storage-dismiss').onclick = () => { storageToast.hidden
 
 search.oninput = render;
 search.onkeydown = e => {
-  if (e.key !== 'Escape') return;
-  search.value = '';
-  search.blur();
-  render();
+  if (e.key === 'Enter') {
+    focusFirst();
+  } else if (e.key === 'Escape') {
+    search.value = '';
+    search.blur();
+    render();
+  }
 };
+function focusFirst() {
+  const first = columns.find(c => c.items.length)?.items[0];
+  if (first) focusTask(first.id);
+}
 document.addEventListener('keydown', e => {
   if (anyOpen() || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
@@ -246,8 +253,7 @@ document.addEventListener('keydown', e => {
     openHelp();
   } else if (e.key in STEPS && e.target === document.body) {
     e.preventDefault();
-    const first = columns.find(c => c.items.length)?.items[0];
-    if (first) focusTask(first.id);
+    focusFirst();
   }
 });
 
