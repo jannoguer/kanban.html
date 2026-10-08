@@ -243,6 +243,7 @@ search.onkeydown = e => {
 function focusFirst() {
   const first = columns.find(c => c.items.length)?.items[0];
   if (first) focusTask(first.id);
+  return Boolean(first);
 }
 // Esc cancels what the focused control is doing and drops the focus.
 function escape() {
@@ -271,7 +272,8 @@ document.addEventListener('keydown', e => {
     openHelp();
   } else if (e.key in STEPS && e.target === document.body) {
     e.preventDefault();
-    focusFirst();
+    // With nothing focused there is no position to measure from: Up starts the toolbar at its first button, the rest start at the first card.
+    if (e.key === 'ArrowUp' || !focusFirst()) toolbar[0].focus();
   }
 });
 
@@ -527,6 +529,16 @@ importFile.onchange = async () => {
   }
   if (tasks.length && !confirm(`Replace the ${tasks.length} current tasks with the ${imported.length} in the file?`)) return;
   tasks = imported;
+  saveTasks();
+};
+
+document.getElementById('delete-all').onclick = () => {
+  const n = tasks.length;
+  if (!n) return;
+  const what = n === 1 ? 'the 1 task' : `all ${n} tasks`;
+  if (!confirm(`Delete ${what}? This cannot be undone.`)) return;
+  if (!confirm(`Really delete ${what}? There is no undo for this.`)) return;
+  tasks = [];
   saveTasks();
 };
 
