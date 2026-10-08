@@ -285,7 +285,7 @@ board.onkeydown = e => {
   const card = e.target.closest('.task');
   if (!card || hasModifier(e)) return;
   const task = tasks.find(byId(card.dataset.id));
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' || e.key.toLowerCase() === 'e') {
     e.preventDefault();
     openDialog(task);
     return;
