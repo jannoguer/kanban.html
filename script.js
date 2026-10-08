@@ -89,14 +89,28 @@ const columns = STATUSES.map(([id, name]) => {
   return column;
 });
 
+// Marks every match of the search; empty slices are skipped so an empty description still matches :empty.
+function setText(el, text) {
+  el.replaceChildren();
+  let i = 0;
+  for (const m of pattern ? text.matchAll(pattern) : []) {
+    if (m.index > i) el.append(text.slice(i, m.index));
+    const mark = document.createElement('mark');
+    mark.textContent = m[0];
+    el.append(mark);
+    i = m.index + m[0].length;
+  }
+  if (i < text.length) el.append(text.slice(i));
+}
+
 function createCard(task) {
   const el = document.createElement('article');
   el.className = 'task';
   el.draggable = true;
   el.tabIndex = 0;
   el.innerHTML = '<strong></strong><p></p>';
-  el.querySelector('strong').textContent = task.title;
-  el.querySelector('p').textContent = task.description;
+  setText(el.querySelector('strong'), task.title);
+  setText(el.querySelector('p'), task.description ?? '');
   el.dataset.id = task.id;
   el.onclick = () => openDialog(task);
   el.ondragstart = e => {
@@ -154,6 +168,7 @@ function measureNew() {
 
 // A new search starts each column at the top; any other change keeps the scroll position.
 let lastQuery = '';
+let pattern = null;
 function render() {
   // Rebuilding the cards drops focus, so it is carried over by id.
   const focusedId = board.contains(document.activeElement) ? document.activeElement.dataset.id : undefined;
@@ -161,7 +176,8 @@ function render() {
   const query = search.value.trim().toLowerCase();
   const newSearch = query !== lastQuery;
   lastQuery = query;
-  const matches = t => textOf(t).toLowerCase().includes(query);
+  pattern = query && new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  const matches = t => textOf(t).search(pattern) !== -1;
   for (const column of columns) {
     const all = tasks.filter(t => t.status === column.id);
     column.items = query ? all.filter(matches) : all;
