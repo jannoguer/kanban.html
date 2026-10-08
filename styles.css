@@ -141,6 +141,7 @@ kbd {
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
   box-shadow: 0 4px 16px rgb(0 0 0 / .15);
 }
+#pointer-hint { padding-right: 16px; }
 .warning:not([hidden]) { gap: 8px; color: #fee2e2; background: #450a0a; border-color: var(--danger); }
 .warning strong { color: #fff; }
 .warning .dismiss { padding: 4px; border: 0; color: #fca5a5; }

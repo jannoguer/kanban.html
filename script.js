@@ -35,8 +35,15 @@ for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
 let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
 let editingId = null;
 
-// The CSS leaves the pointer only the root, but pressing there would still drop the focus or open a menu.
-for (const type of ['mousedown', 'contextmenu']) addEventListener(type, e => e.preventDefault());
+// The CSS leaves the pointer only the root, but pressing there would still drop the focus or open a menu; the hint says why nothing happens.
+const pointerHint = document.getElementById('pointer-hint');
+let hintTimer;
+for (const type of ['mousedown', 'contextmenu']) addEventListener(type, e => {
+  e.preventDefault();
+  pointerHint.hidden = false;
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { pointerHint.hidden = true; }, 3000);
+});
 
 root.dataset.theme = localStorage.getItem(THEME_KEY)
   || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
