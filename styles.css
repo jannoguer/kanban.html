@@ -135,16 +135,17 @@ kbd {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   width: max-content; max-width: calc(100vw - 32px);
 }
-.toast:not([hidden]) {
+.toast {
   position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 10px 10px 10px 16px; overflow: hidden;
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
   box-shadow: 0 4px 16px rgb(0 0 0 / .15);
+  transition: opacity .15s, display .15s allow-discrete;
 }
+/* The box keeps its styles while fading, as only display and opacity change with hidden. */
+.toast[hidden] { display: none; opacity: 0; }
+@starting-style { .toast { opacity: 0; } }
 #pointer-hint { padding-right: 16px; }
-/* Fading out needs the toast kept displayed until the opacity is gone. */
-.toast { transition: opacity .25s, display .25s allow-discrete; }
-.toast[hidden] { opacity: 0; }
-.warning:not([hidden]) { gap: 8px; color: #fee2e2; background: #450a0a; border-color: var(--danger); }
+.warning { gap: 8px; color: #fee2e2; background: #450a0a; border-color: var(--danger); }
 .warning strong { color: #fff; }
 .warning .dismiss { padding: 4px; border: 0; color: #fca5a5; }
