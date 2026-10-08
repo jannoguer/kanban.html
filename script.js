@@ -270,6 +270,23 @@ document.addEventListener('keydown', e => {
 });
 
 const STEPS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+// The board name and search are left out: the arrows edit text there.
+const toolbar = [...document.querySelectorAll('nav button')];
+const centerX = el => el.getBoundingClientRect().left + el.offsetWidth / 2;
+// Moving between the toolbar and the columns keeps the horizontal position, like moving between columns keeps the row.
+const nearestTo = (x, list, elOf) => list.reduce((a, b) => Math.abs(centerX(elOf(b)) - x) < Math.abs(centerX(elOf(a)) - x) ? b : a);
+document.querySelector('nav').onkeydown = e => {
+  const i = toolbar.indexOf(e.target);
+  if (i === -1 || !(e.key in STEPS) || e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault();
+  const [dx, dy] = STEPS[e.key];
+  if (dx) {
+    toolbar[i + dx]?.focus();
+  } else if (dy > 0) {
+    const filled = columns.filter(c => c.items.length);
+    if (filled.length) focusTask(nearestTo(centerX(e.target), filled, c => c.list).items[0].id);
+  }
+};
 // Arrows move focus between cards; with Shift they move the focused task instead.
 board.onkeydown = e => {
   const card = e.target.closest('.task');
@@ -305,6 +322,8 @@ board.onkeydown = e => {
     }
   } else if (items[i + dy]) {
     focusTask(items[i + dy].id);
+  } else if (dy < 0) {
+    nearestTo(centerX(columns[c].list), toolbar, b => b).focus();
   }
 };
 
