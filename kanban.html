@@ -33,7 +33,7 @@ nav {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface);
 }
-nav h1 { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; }
+nav h1 { flex: 1; min-width: 0; max-width: 60ch; overflow: hidden; white-space: nowrap; font-size: 16px; font-weight: 600; }
 nav > div { display: flex; align-items: center; gap: 12px; }
 #search { width: 180px; padding: 5px 10px; }
 .icon {
@@ -271,6 +271,15 @@ for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
 }
 let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
 let editingId = null;
+
+// The page is named after its file, so a renamed copy names itself; a directory index or an odd scheme keeps the static title.
+function fileName(fallback) {
+  if (!/^(file|https?):$/.test(location.protocol)) return fallback;
+  const last = location.pathname.split('/').pop();
+  if (!last) return fallback;
+  try { return decodeURIComponent(last).normalize('NFC'); } catch { return last; }
+}
+document.title = document.querySelector('h1').textContent = fileName(document.title);
 
 // Keyboard only, but the pointer may still select text: presses on controls neither focus them nor open a select, clicks do nothing, and the wheel does not scroll.
 // A text field takes presses only once the keyboard has focused it, so the pointer can select inside it but not enter it.
@@ -637,7 +646,7 @@ document.getElementById('export').onclick = () => {
   const link = document.createElement('a');
   link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(tasks, null, 2));
   // Swedish dates are ISO-shaped and, unlike toISOString(), in local time.
-  link.download = `${document.title}-${new Date().toLocaleDateString('sv')}.json`;
+  link.download = `${document.title.replace(/\.[^.]+$/, '')}-${new Date().toLocaleDateString('sv')}.json`;
   link.click();
 };
 
