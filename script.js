@@ -261,14 +261,10 @@ function focusFirst() {
   if (first) focusTask(first.id);
   return Boolean(first);
 }
-// Esc cancels what the focused control is doing and drops the focus.
+// Esc drops the focus; a board name edit is also reverted.
 function escape() {
   const el = document.activeElement;
   if (el === boardName) boardName.value = nameBeforeEdit;
-  if (el === search) {
-    search.value = '';
-    render();
-  }
   el.blur();
 }
 // Shift is left out: it types ? and moves tasks.
