@@ -28,10 +28,11 @@
     <button class="icon" id="add" aria-label="Add task">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
+    <button class="icon" id="help-button" aria-label="Help" aria-keyshortcuts="?">?</button>
   </div>
 </nav>
 <main></main>
-<dialog>
+<dialog id="task-dialog">
   <form method="dialog">
     <h3></h3>
     <div class="field"><span id="title-label">Title</span><input name="title" aria-labelledby="title-label" required pattern=".*\S.*" autocomplete="off"></div>
@@ -42,6 +43,34 @@
       <button class="primary">Save</button>
       <button type="button" id="cancel">Cancel</button>
     </div>
+  </form>
+</dialog>
+<dialog id="help" aria-labelledby="help-title">
+  <form method="dialog">
+    <h3 id="help-title">Help</h3>
+    <p>Tasks move left to right through the columns. Everything is saved in this browser only, and other open tabs of the board stay in sync.</p>
+    <h4>Mouse</h4>
+    <ul>
+      <li>Click empty space in a column to add a task there.</li>
+      <li>Click a card to edit or delete it. A deletion can be undone for 5 seconds.</li>
+      <li>Drag a card to move it to another column or another place in its column.</li>
+      <li>Click the board name to rename it.</li>
+      <li>Search matches titles and descriptions. While searching, each column shows its matches out of its total.</li>
+      <li>Export downloads every task as a JSON file. Import replaces every task with the ones in such a file. The board name and theme are not included.</li>
+    </ul>
+    <h4>Keyboard</h4>
+    <table>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>/</kbd></td><td>Search</td></tr>
+      <tr><td><kbd>N</kbd></td><td>New task</td></tr>
+      <tr><td><kbd>Arrow keys</kbd></td><td>Move between cards</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>Open the focused card</td></tr>
+      <tr><td><kbd>Shift</kbd> + <kbd>Arrow keys</kbd></td><td>Move the focused task</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Save the open task (<kbd>Cmd</kbd> on Mac)</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close a dialog, clear the search, or undo a board name edit</td></tr>
+      <tr><td><kbd>Tab</kbd></td><td>Move between controls and cards</td></tr>
+    </table>
+    <div class="actions"><button class="primary">Close</button></div>
   </form>
 </dialog>
 <div class="toasts">

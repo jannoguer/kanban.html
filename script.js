@@ -11,7 +11,8 @@ const DEFAULT_STATUS = STATUSES[0][0];
 const DRAG_TYPE = 'application/x-planning-board-task';
 const root = document.documentElement;
 const board = document.querySelector('main');
-const dialog = document.querySelector('dialog');
+const dialog = document.getElementById('task-dialog');
+const help = document.getElementById('help');
 const form = dialog.querySelector('form');
 const fields = form.elements;
 const deleteButton = document.getElementById('delete');
@@ -233,13 +234,16 @@ search.onkeydown = e => {
   render();
 };
 document.addEventListener('keydown', e => {
-  if (dialog.open || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
+  if (dialog.open || help.open || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
     e.preventDefault();
     search.focus();
   } else if (e.key.toLowerCase() === 'n') {
     e.preventDefault();
     openDialog(null);
+  } else if (e.key === '?') {
+    e.preventDefault();
+    help.showModal();
   } else if (e.key in STEPS && e.target === document.body) {
     e.preventDefault();
     const first = columns.find(c => c.items.length)?.items[0];
@@ -320,6 +324,7 @@ form.onsubmit = () => {
 };
 
 document.getElementById('add').onclick = () => openDialog(null);
+document.getElementById('help-button').onclick = () => help.showModal();
 document.getElementById('cancel').onclick = () => dialog.close();
 // The bar's animation is the timer, so the bar and the hide can never drift apart.
 let countdown;
@@ -348,13 +353,17 @@ deleteButton.onclick = () => {
   saveTasks();
 };
 // Clicks on the dialog element itself (not the form) land on the backdrop.
-dialog.onclick = e => {
-  if (e.target === dialog) dialog.close();
+for (const d of [dialog, help]) d.onclick = e => {
+  if (e.target === d) d.close();
 };
-// Opened by a shortcut, there is no focus to restore, so it would stay on a hidden field and block the shortcuts.
+// Opened by a shortcut, there is no focus to restore, so it would stay on a hidden element and block the shortcuts.
+const blurInside = d => {
+  if (d.contains(document.activeElement)) document.activeElement.blur();
+};
+help.onclose = () => blurInside(help);
 // Saving rebuilds the cards, so focus goes back to the edited task by id.
 dialog.onclose = () => {
-  if (dialog.contains(document.activeElement)) document.activeElement.blur();
+  blurInside(dialog);
   if (editingId) focusTask(editingId);
 };
 
