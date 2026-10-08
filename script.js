@@ -12,7 +12,6 @@ const dialog = document.getElementById('task-dialog');
 const help = document.getElementById('help');
 const form = dialog.querySelector('form');
 const fields = form.elements;
-const deleteButton = document.getElementById('delete');
 const search = document.getElementById('search');
 const dialogTitle = dialog.querySelector('h3');
 const storageToast = document.getElementById('storage-full');
@@ -306,6 +305,16 @@ board.onkeydown = e => {
     openDialog(task);
     return;
   }
+  // No confirmation: U brings the task back. The focus moves on to a neighbour so D can be pressed again.
+  if (e.key.toLowerCase() === 'd') {
+    const { items } = columns.find(byId(task.status));
+    const i = items.indexOf(task);
+    const next = items[i + 1] ?? items[i - 1];
+    tasks = tasks.filter(t => t !== task);
+    saveTasks();
+    if (next) focusTask(next.id);
+    return;
+  }
   if (!stepOf(e)) return;
   e.preventDefault();
   const [dx, dy] = stepOf(e);
@@ -342,7 +351,6 @@ function openDialog(task) {
   fields.title.value = task?.title ?? '';
   fields.description.value = task?.description ?? '';
   fields.status.value = task?.status ?? DEFAULT_STATUS;
-  deleteButton.hidden = !task;
   setHash(task ? hashOf(task) : '#new');
   dialog.showModal();
 }
@@ -396,11 +404,6 @@ form.onsubmit = () => {
 document.getElementById('add').onclick = () => openDialog(null);
 document.getElementById('help-button').onclick = openHelp;
 document.getElementById('cancel').onclick = () => dialog.close();
-deleteButton.onclick = () => {
-  tasks = tasks.filter(t => t.id !== editingId);
-  dialog.close();
-  saveTasks();
-};
 // Close events arrive late, so one may come after the hash already opened another dialog; it is then ignored.
 // Opened by a shortcut, there is no focus to restore, so it would stay on a hidden element and block the shortcuts.
 function settleClose(d) {
