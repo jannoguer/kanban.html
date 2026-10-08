@@ -252,6 +252,8 @@ const actions = {
   y: () => travel(future, past),
 };
 document.addEventListener('keydown', e => {
+  // Space would scroll the board or the help; it still types, opens a select and presses a button.
+  if (e.key === ' ' && !typesHere(e) && !e.target.matches('button')) e.preventDefault();
   // Esc closes an open dialog natively.
   if (anyOpen()) return;
   const key = hasModifier(e) || typesHere(e) ? '' : e.key.toLowerCase();
