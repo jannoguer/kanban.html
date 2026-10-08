@@ -52,34 +52,31 @@
 <dialog id="help" aria-labelledby="help-title">
   <form method="dialog">
     <h3 id="help-title" tabindex="-1" autofocus>Help</h3>
-    <p>Tasks move left to right through the columns. Everything is saved in this browser only, and other open tabs of the board stay in sync.</p>
+    <p>Tasks move left to right. Everything is saved in this browser only.</p>
     <h4>Board</h4>
     <ul>
-      <li>Search matches titles and descriptions and marks the matches on the cards. While searching, each column shows its matches out of its total.</li>
-      <li>Tags need no setup: write <kbd>#ui</kbd> or <kbd>#bug</kbd> in a title or description and search for it. The counters then show how many tasks in each column carry the tag.</li>
-      <li>Export downloads every task as a JSON file. Import replaces every task with the ones in such a file. The board name and theme are not included.</li>
-      <li>Delete all removes every task after asking twice. It cannot be undone, so export first if in doubt.</li>
-      <li>The address ends in <kbd>#help</kbd>, <kbd>#new</kbd> or a task's id while that dialog is open, so it can be bookmarked and reopens on reload.</li>
+      <li>Search looks through titles and descriptions.</li>
+      <li>Tag tasks by writing <kbd>#ui</kbd> or <kbd>#bug</kbd> anywhere, then search for the tag.</li>
+      <li>Export saves all tasks to a file. Import replaces them from one.</li>
+      <li>Delete all cannot be undone. Export first.</li>
+      <li>The address follows the open dialog, so it can be bookmarked.</li>
     </ul>
     <h4>Mouse</h4>
     <ul>
-      <li>Click empty space in a column to add a task there.</li>
-      <li>Click a card to edit or delete it. A deletion can be undone for 5 seconds.</li>
-      <li>Drag a card to move it to another column or another place in its column.</li>
+      <li>Click a column to add a task, a card to edit it.</li>
+      <li>Drag cards to move them.</li>
       <li>Click the board name to rename it.</li>
     </ul>
     <h4>Keyboard</h4>
     <table>
-      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Help</td></tr>
       <tr><td><kbd>/</kbd></td><td>Search</td></tr>
-      <tr><td><kbd>Enter</kbd> in search</td><td>Jump to the first match</td></tr>
       <tr><td><kbd>N</kbd></td><td>New task</td></tr>
-      <tr><td><kbd>Arrow keys</kbd></td><td>Move between cards, and up into the toolbar buttons. With nothing focused, Up goes to the toolbar and the others to the first card</td></tr>
-      <tr><td><kbd>Enter</kbd></td><td>Open the focused card</td></tr>
-      <tr><td><kbd>Shift</kbd> + <kbd>Arrow keys</kbd></td><td>Move the focused task</td></tr>
-      <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Save the open task (<kbd>Cmd</kbd> on Mac)</td></tr>
-      <tr><td><kbd>Esc</kbd></td><td>Close a dialog, or drop the focus; this clears the search and undoes a board name edit</td></tr>
-      <tr><td><kbd>Tab</kbd></td><td>Move between controls and cards</td></tr>
+      <tr><td><kbd>Arrow keys</kbd></td><td>Move around</td></tr>
+      <tr><td><kbd>Shift</kbd> + <kbd>Arrow keys</kbd></td><td>Move the task</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>Open the card, or the first match from the search</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Save (<kbd>Cmd</kbd> on Mac)</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close or clear</td></tr>
     </table>
     <div class="actions"><button class="primary">Close</button></div>
   </form>
