@@ -234,7 +234,7 @@ search.onkeydown = e => {
   render();
 };
 document.addEventListener('keydown', e => {
-  if (dialog.open || help.open || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
+  if (anyOpen() || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
     e.preventDefault();
     search.focus();
@@ -243,7 +243,7 @@ document.addEventListener('keydown', e => {
     openDialog(null);
   } else if (e.key === '?') {
     e.preventDefault();
-    help.showModal();
+    openHelp();
   } else if (e.key in STEPS && e.target === document.body) {
     e.preventDefault();
     const first = columns.find(c => c.items.length)?.items[0];
@@ -297,8 +297,31 @@ function openDialog(task, status = DEFAULT_STATUS) {
   fields.description.value = task?.description ?? '';
   fields.status.value = task?.status ?? status;
   deleteButton.hidden = !task;
+  setHash(task ? `#${encodeURIComponent(task.id)}` : '#new');
   dialog.showModal();
 }
+
+function openHelp() {
+  setHash('#help');
+  help.showModal();
+}
+
+// Replaced rather than pushed, so dialogs leave no history entries; this fires no hashchange either.
+const setHash = hash => history.replaceState(null, '', hash || location.pathname + location.search);
+const anyOpen = () => dialog.open || help.open;
+
+// The hash names the open dialog, so it can be linked to and survives a reload; an unknown one is dropped.
+function openFromHash() {
+  const hash = location.hash;
+  dialog.close();
+  help.close();
+  const task = tasks.find(t => `#${encodeURIComponent(t.id)}` === hash);
+  if (hash === '#help') openHelp();
+  else if (hash === '#new') openDialog(null);
+  else if (task) openDialog(task);
+  else setHash('');
+}
+addEventListener('hashchange', openFromHash);
 
 form.onkeydown = e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -324,7 +347,7 @@ form.onsubmit = () => {
 };
 
 document.getElementById('add').onclick = () => openDialog(null);
-document.getElementById('help-button').onclick = () => help.showModal();
+document.getElementById('help-button').onclick = openHelp;
 document.getElementById('cancel').onclick = () => dialog.close();
 // The bar's animation is the timer, so the bar and the hide can never drift apart.
 let countdown;
@@ -356,15 +379,18 @@ deleteButton.onclick = () => {
 for (const d of [dialog, help]) d.onclick = e => {
   if (e.target === d) d.close();
 };
+// Close events arrive late, so one may come after the hash already opened another dialog; it is then ignored.
 // Opened by a shortcut, there is no focus to restore, so it would stay on a hidden element and block the shortcuts.
-const blurInside = d => {
+function settleClose(d) {
+  if (anyOpen()) return false;
   if (d.contains(document.activeElement)) document.activeElement.blur();
-};
-help.onclose = () => blurInside(help);
+  setHash('');
+  return true;
+}
+help.onclose = () => settleClose(help);
 // Saving rebuilds the cards, so focus goes back to the edited task by id.
 dialog.onclose = () => {
-  blurInside(dialog);
-  if (editingId) focusTask(editingId);
+  if (settleClose(dialog) && editingId) focusTask(editingId);
 };
 
 // Fires only in other tabs, which have already saved the change.
@@ -462,3 +488,4 @@ importFile.onchange = async () => {
 
 render();
 storageToast.hidden = hasRoom(SMALLEST_TASK);
+openFromHash();
