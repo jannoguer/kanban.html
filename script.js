@@ -4,11 +4,8 @@ const STATUSES = [
 ];
 const TASKS_KEY = 'planning-board:tasks';
 const THEME_KEY = 'planning-board:theme';
-const NAME_KEY = 'planning-board:name';
 const ROOM_KEY = 'planning-board:room';
-const DEFAULT_NAME = 'PLANNING BOARD';
 const DEFAULT_STATUS = STATUSES[0][0];
-const DRAG_TYPE = 'application/x-planning-board-task';
 const root = document.documentElement;
 const board = document.querySelector('main');
 const dialog = document.getElementById('task-dialog');
@@ -16,16 +13,11 @@ const help = document.getElementById('help');
 const form = dialog.querySelector('form');
 const fields = form.elements;
 const deleteButton = document.getElementById('delete');
-const boardName = document.getElementById('board-name');
 const search = document.getElementById('search');
 const dialogTitle = dialog.querySelector('h3');
-const undoToast = document.getElementById('undo-toast');
-const undoButton = document.getElementById('undo');
-const undoTitle = undoToast.querySelector('.title');
-const undoCountdown = undoToast.querySelector('.countdown');
 const storageToast = document.getElementById('storage-full');
-// Longest board name and theme values, with their keys.
-const SETTINGS_ROOM = NAME_KEY.length + boardName.maxLength + THEME_KEY.length + 'light'.length;
+// The longest theme value, with its key.
+const SETTINGS_ROOM = THEME_KEY.length + 'light'.length;
 // Storage counts as full when not even this would fit.
 const SMALLEST_TASK = JSON.stringify({ id: crypto.randomUUID(), title: 'x', description: '', status: DEFAULT_STATUS }).length + 1;
 // Matches the .list gap in styles.css.
@@ -43,40 +35,18 @@ for (const [oldKey, newKey] of [['tasks', TASKS_KEY], ['theme', THEME_KEY]]) {
 let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
 let editingId = null;
 
+// The CSS leaves the pointer only the root, but pressing there would still drop the focus or open a menu.
+for (const type of ['mousedown', 'contextmenu']) addEventListener(type, e => e.preventDefault());
+
 root.dataset.theme = localStorage.getItem(THEME_KEY)
   || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-// Theme and name are written directly: hasRoom() reserves space for them, so they cannot hit the quota.
+// The theme is written directly: hasRoom() reserves space for it, so it cannot hit the quota.
 document.getElementById('theme').onclick = e => {
-  // Enabled on first click only, so applying the stored theme on load does not animate.
+  // Enabled on the first toggle only, so applying the stored theme on load does not animate.
   e.currentTarget.classList.add('animate');
   root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem(THEME_KEY, root.dataset.theme);
 };
-
-function saveName(value) {
-  const name = value.trim() || DEFAULT_NAME;
-  document.title = name;
-  localStorage.setItem(NAME_KEY, name);
-  return name;
-}
-
-// Null when not editing. Tracked by focus/blur because activeElement stays set while the tab is in the background.
-let nameBeforeEdit = null;
-boardName.value = document.title = localStorage.getItem(NAME_KEY) || DEFAULT_NAME;
-boardName.onfocus = () => { nameBeforeEdit = boardName.value; };
-boardName.onblur = () => {
-  boardName.value = saveName(boardName.value);
-  nameBeforeEdit = null;
-};
-// Esc reverts here; the document handler then drops the focus, which saves the restored value.
-boardName.onkeydown = e => {
-  if (e.key === 'Enter') boardName.blur();
-  if (e.key === 'Escape') boardName.value = nameBeforeEdit;
-};
-// Closing or reloading mid-edit fires no blur, so the edit is committed here.
-addEventListener('pagehide', () => {
-  if (nameBeforeEdit !== null) saveName(boardName.value);
-});
 
 const columns = STATUSES.map(([id, name]) => {
   board.insertAdjacentHTML('beforeend',
@@ -84,9 +54,6 @@ const columns = STATUSES.map(([id, name]) => {
   const section = board.lastElementChild;
   fields.status.add(new Option(name, id));
   const column = { id, list: section.querySelector('.list'), counter: section.querySelector('span'), items: [], sizes: [], start: 0, end: 0 };
-  column.list.onclick = e => {
-    if (!e.target.closest('.task')) openDialog(null, id);
-  };
   column.list.onscroll = () => layout(column);
   return column;
 });
@@ -108,23 +75,11 @@ function setText(el, text) {
 function createCard(task) {
   const el = document.createElement('article');
   el.className = 'task';
-  el.draggable = true;
   el.tabIndex = 0;
   el.innerHTML = '<strong></strong><p></p>';
   setText(el.querySelector('strong'), task.title);
   setText(el.querySelector('p'), task.description ?? '');
   el.dataset.id = task.id;
-  el.onclick = () => openDialog(task);
-  el.ondragstart = e => {
-    e.dataTransfer.setData(DRAG_TYPE, task.id);
-    e.dataTransfer.effectAllowed = 'move';
-    // Deferred so the drag image is captured before the card is dimmed.
-    requestAnimationFrame(() => el.classList.add('dragging'));
-  };
-  el.ondragend = () => {
-    el.classList.remove('dragging');
-    marker.remove();
-  };
   return el;
 }
 
@@ -145,9 +100,7 @@ function layout(column) {
   if (start >= column.end || end <= column.start) {
     list.replaceChildren(...items.slice(start, end).map(createCard));
   } else {
-    // Live, and skips the drop marker.
-    const cards = list.getElementsByClassName('task');
-    // Only the edges change, so a card being dragged stays in place.
+    const cards = list.children;
     for (; column.start < start; column.start++) cards[0].remove();
     for (; column.end > end; column.end--) cards[cards.length - 1].remove();
     list.prepend(...items.slice(start, column.start).map(createCard));
@@ -202,7 +155,7 @@ function focusTask(id) {
     column.list.scrollTop = column.sizes.slice(0, index).reduce((a, b) => a + b, 0);
     layout(column);
   }
-  column.list.getElementsByClassName('task')[index - column.start].focus();
+  column.list.children[index - column.start].focus();
 }
 
 // Wrapping follows the column width, so every card is measured again once resizing settles.
@@ -233,28 +186,32 @@ function hasRoom(chars) {
   return fits;
 }
 
-function saveTasks() {
+// Whole snapshots, so every kind of change undoes the same way.
+const past = [];
+const future = [];
+function saveTasks(record = true) {
   const json = JSON.stringify(tasks);
-  const growth = json.length - (localStorage.getItem(TASKS_KEY)?.length ?? 0);
+  const before = localStorage.getItem(TASKS_KEY) ?? '[]';
+  const growth = json.length - before.length;
   // Room is proven before writing, so other tabs never see a change that has to be taken back.
   const saved = (growth <= 0 || hasRoom(growth)) && store(TASKS_KEY, json);
+  if (saved && record && json !== before) {
+    past.push(before);
+    future.length = 0;
+  }
   storageToast.hidden = saved && hasRoom(SMALLEST_TASK);
   render();
+}
+function travel(from, to) {
+  if (!from.length) return;
+  to.push(JSON.stringify(tasks));
+  tasks = JSON.parse(from.pop());
+  saveTasks(false);
 }
 document.getElementById('storage-dismiss').onclick = () => { storageToast.hidden = true; };
 
 search.oninput = render;
-// The mouseup of a focusing click would collapse the selection, so that one is cancelled; a click into the focused field still places the caret.
-let selectedOnFocus = false;
-search.onfocus = () => {
-  search.select();
-  selectedOnFocus = true;
-};
-search.onmousedown = () => { selectedOnFocus = false; };
-search.onmouseup = e => {
-  if (selectedOnFocus) e.preventDefault();
-  selectedOnFocus = false;
-};
+search.onfocus = () => search.select();
 search.onkeydown = e => {
   if (e.key === 'Enter') focusFirst();
 };
@@ -263,43 +220,59 @@ function focusFirst() {
   if (first) focusTask(first.id);
   return Boolean(first);
 }
-// Shift is left out: it types ? and moves tasks.
+// Shift is left out: it types ?.
 const hasModifier = e => e.ctrlKey || e.metaKey || e.altKey;
+const typesHere = e => e.target.matches('input, textarea, select');
+const actions = {
+  '/': () => search.focus(),
+  '?': openHelp,
+  q: () => document.activeElement.blur(),
+  n: () => openDialog(null),
+  c: () => {
+    search.value = '';
+    render();
+  },
+  u: () => travel(past, future),
+  y: () => travel(future, past),
+};
 document.addEventListener('keydown', e => {
-  if (anyOpen()) return;
-  if (e.key === 'Escape') {
-    // Without this a search input empties itself natively, leaving the field blank while the filter stays.
-    e.preventDefault();
-    return e.target.blur();
+  // Q types in text fields, so Esc stays the way out of them and the native way to close a dialog.
+  const key = hasModifier(e) || typesHere(e) ? '' : e.key.toLowerCase();
+  const open = [dialog, help].find(d => d.open);
+  if (open) {
+    if (key === 'q') open.close();
+    return;
   }
-  if (hasModifier(e) || e.target.matches('input, textarea, select')) return;
-  if (e.key === '/') {
+  if (e.key === 'Escape') return e.target.blur();
+  if (key in actions) {
     e.preventDefault();
-    search.focus();
-  } else if (e.key.toLowerCase() === 'n') {
+    actions[key]();
+  } else if (key in STEPS && e.target === document.body) {
     e.preventDefault();
-    openDialog(null);
-  } else if (e.key === '?') {
-    e.preventDefault();
-    openHelp();
-  } else if (e.key in STEPS && e.target === document.body) {
-    e.preventDefault();
-    // With nothing focused there is no position to measure from: Up starts the toolbar at its first button, the rest start at the first card.
-    if (e.key === 'ArrowUp' || !focusFirst()) toolbar[0].focus();
+    // With nothing focused there is no position to measure from: I starts the toolbar at its first button, the rest start at the first card.
+    if (key === 'i' || !focusFirst()) toolbar[0].focus();
   }
 });
 
-const STEPS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-// The board name and search are left out: the arrows edit text there.
+// Lowercased so Shift and Caps Lock change nothing.
+const STEPS = { j: [-1, 0], l: [1, 0], i: [0, -1], k: [0, 1] };
+const stepOf = e => STEPS[e.key.toLowerCase()];
+// Held rather than toggled, so letting go always ends moving; leaving the window fires no keyup, so blur ends it too.
+let holdingG = false;
+for (const type of ['keydown', 'keyup']) addEventListener(type, e => {
+  if (e.key.toLowerCase() === 'g') holdingG = type === 'keydown';
+});
+addEventListener('blur', () => { holdingG = false; });
+// The search is left out: the letters type there.
 const toolbar = [...document.querySelectorAll('nav button')];
 const centerX = el => el.getBoundingClientRect().left + el.offsetWidth / 2;
 // Moving between the toolbar and the columns keeps the horizontal position, like moving between columns keeps the row.
 const nearestTo = (x, list, elOf) => list.reduce((a, b) => Math.abs(centerX(elOf(b)) - x) < Math.abs(centerX(elOf(a)) - x) ? b : a);
 document.querySelector('nav').onkeydown = e => {
   const i = toolbar.indexOf(e.target);
-  if (i === -1 || !(e.key in STEPS) || hasModifier(e)) return;
+  if (i === -1 || !stepOf(e) || hasModifier(e)) return;
   e.preventDefault();
-  const [dx, dy] = STEPS[e.key];
+  const [dx, dy] = stepOf(e);
   if (dx) {
     toolbar[i + dx]?.focus();
   } else if (dy > 0) {
@@ -307,7 +280,7 @@ document.querySelector('nav').onkeydown = e => {
     if (filled.length) focusTask(nearestTo(centerX(e.target), filled, c => c.list).items[0].id);
   }
 };
-// Arrows move focus between cards; with Shift they move the focused task instead.
+// IJKL move focus between cards; with G held they move the focused task instead.
 board.onkeydown = e => {
   const card = e.target.closest('.task');
   if (!card || hasModifier(e)) return;
@@ -317,13 +290,13 @@ board.onkeydown = e => {
     openDialog(task);
     return;
   }
-  if (!(e.key in STEPS)) return;
+  if (!stepOf(e)) return;
   e.preventDefault();
-  const [dx, dy] = STEPS[e.key];
+  const [dx, dy] = stepOf(e);
   const c = columns.findIndex(byId(task.status));
   const { items } = columns[c];
   const i = items.indexOf(task);
-  if (e.shiftKey) {
+  if (holdingG) {
     if (dx) {
       const target = columns[c + dx];
       if (!target) return;
@@ -347,12 +320,12 @@ board.onkeydown = e => {
   }
 };
 
-function openDialog(task, status = DEFAULT_STATUS) {
+function openDialog(task) {
   editingId = task?.id ?? null;
   dialogTitle.textContent = task ? 'Edit task' : 'New task';
   fields.title.value = task?.title ?? '';
   fields.description.value = task?.description ?? '';
-  fields.status.value = task?.status ?? status;
+  fields.status.value = task?.status ?? DEFAULT_STATUS;
   deleteButton.hidden = !task;
   setHash(task ? hashOf(task) : '#new');
   dialog.showModal();
@@ -407,35 +380,10 @@ form.onsubmit = () => {
 document.getElementById('add').onclick = () => openDialog(null);
 document.getElementById('help-button').onclick = openHelp;
 document.getElementById('cancel').onclick = () => dialog.close();
-// The bar's animation is the timer, so the bar and the hide can never drift apart.
-let countdown;
-function hideToast() {
-  countdown?.cancel();
-  undoToast.hidden = true;
-}
 deleteButton.onclick = () => {
-  // -1 when another tab already deleted it.
-  const index = tasks.findIndex(byId(editingId));
-  if (index !== -1) {
-    const [task] = tasks.splice(index, 1);
-    undoButton.onclick = () => {
-      // Skipped if another tab restored it meanwhile; an index past the end appends.
-      if (!tasks.some(byId(task.id))) tasks.splice(index, 0, task);
-      hideToast();
-      saveTasks();
-    };
-    undoTitle.textContent = task.title;
-    countdown?.cancel();
-    undoToast.hidden = false;
-    countdown = undoCountdown.animate([{ scale: '1 1' }, { scale: '0 1' }], 5000);
-    countdown.onfinish = hideToast;
-  }
+  tasks = tasks.filter(t => t.id !== editingId);
   dialog.close();
   saveTasks();
-};
-// Clicks on the dialog element itself (not the form) land on the backdrop.
-for (const d of [dialog, help]) d.onclick = e => {
-  if (e.target === d) d.close();
 };
 // Close events arrive late, so one may come after the hash already opened another dialog; it is then ignored.
 // Opened by a shortcut, there is no focus to restore, so it would stay on a hidden element and block the shortcuts.
@@ -455,12 +403,12 @@ dialog.onclose = () => {
 addEventListener('storage', e => {
   if (e.key === TASKS_KEY) {
     tasks = JSON.parse(e.newValue || '[]');
+    // Undoing here would silently revert the other tab's change, so history starts over.
+    past.length = 0;
+    future.length = 0;
     render();
   } else if (e.key === THEME_KEY && e.newValue) {
     root.dataset.theme = e.newValue;
-  } else if (e.key === NAME_KEY && e.newValue && nameBeforeEdit === null) {
-    // An edit in progress here is left alone; it saves its own value when it finishes.
-    boardName.value = document.title = e.newValue;
   }
 });
 
@@ -470,51 +418,16 @@ function moveTask(id, status, beforeId) {
   if (!task || id === beforeId) return;
   tasks.splice(tasks.indexOf(task), 1);
   task.status = status;
-  // A target removed by another tab mid-drag yields -1, which falls back to the end.
+  // A target removed by another tab yields -1, which falls back to the end.
   const index = tasks.findIndex(byId(beforeId));
   tasks.splice(index === -1 ? tasks.length : index, 0, task);
 }
-
-function dropPoint(e) {
-  const list = e.target.closest('section')?.querySelector('.list');
-  if (!list) return null;
-  const before = [...list.querySelectorAll('.task:not(.dragging)')].find(card => {
-    const box = card.getBoundingClientRect();
-    return e.clientY < box.top + box.height / 2;
-  });
-  return { list, before: before ?? null };
-}
-
-const marker = document.createElement('div');
-marker.className = 'drop-marker';
-// Checked by type because the data itself is unreadable until drop; this also ignores dragged files and text.
-const isTaskDrag = e => e.dataTransfer.types.includes(DRAG_TYPE);
-
-board.ondragover = e => {
-  if (!isTaskDrag(e)) return;
-  e.preventDefault();
-  const point = dropPoint(e);
-  if (point) point.list.insertBefore(marker, point.before);
-  else marker.remove();
-};
-board.ondragleave = e => {
-  if (!board.contains(e.relatedTarget)) marker.remove();
-};
-board.ondrop = e => {
-  if (!isTaskDrag(e)) return;
-  e.preventDefault();
-  marker.remove();
-  const point = dropPoint(e);
-  if (!point) return;
-  moveTask(e.dataTransfer.getData(DRAG_TYPE), point.list.parentElement.dataset.status, point.before?.dataset.id ?? null);
-  saveTasks();
-};
 
 document.getElementById('export').onclick = () => {
   const link = document.createElement('a');
   link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(tasks, null, 2));
   // Swedish dates are ISO-shaped and, unlike toISOString(), in local time.
-  link.download = `${boardName.value}-${new Date().toLocaleDateString('sv')}.json`;
+  link.download = `${document.title}-${new Date().toLocaleDateString('sv')}.json`;
   link.click();
 };
 
@@ -548,8 +461,7 @@ document.getElementById('delete-all').onclick = () => {
   const n = tasks.length;
   if (!n) return;
   const what = n === 1 ? 'the 1 task' : `all ${n} tasks`;
-  if (!confirm(`Delete ${what}? This cannot be undone.`)) return;
-  if (!confirm(`Really delete ${what}? There is no undo for this.`)) return;
+  if (!confirm(`Delete ${what}?`)) return;
   tasks = [];
   saveTasks();
 };
