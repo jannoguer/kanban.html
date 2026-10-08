@@ -218,8 +218,9 @@ addEventListener('blur', () => { holdingG = false; });
 // The search is left out: the letters type there.
 const toolbar = [...document.querySelectorAll('nav button')];
 const centerX = el => el.getBoundingClientRect().left + el.offsetWidth / 2;
-// Moving between the toolbar and the columns keeps the horizontal position, like moving between columns keeps the row.
-const nearestTo = (x, list, elOf) => list.reduce((a, b) => Math.abs(centerX(elOf(b)) - x) < Math.abs(centerX(elOf(a)) - x) ? b : a);
+const centerY = el => el.getBoundingClientRect().top + el.offsetHeight / 2;
+// Moving between the toolbar and the columns keeps the horizontal position, like moving between columns keeps the height on screen.
+const nearestTo = (at, list, posOf) => list.reduce((a, b) => Math.abs(posOf(b) - at) < Math.abs(posOf(a) - at) ? b : a);
 document.querySelector('nav').onkeydown = e => {
   const i = toolbar.indexOf(e.target);
   if (i === -1 || !stepOf(e) || hasModifier(e)) return;
@@ -229,7 +230,7 @@ document.querySelector('nav').onkeydown = e => {
     toolbar[i + dx]?.focus();
   } else if (dy > 0) {
     const filled = columns.filter(c => c.items.length);
-    if (filled.length) focusTask(nearestTo(centerX(e.target), filled, c => c.list).items[0].id);
+    if (filled.length) focusTask(nearestTo(centerX(e.target), filled, c => centerX(c.list)).items[0].id);
   }
 };
 // IJKL move focus between cards; with G held they move the focused task instead.
@@ -270,15 +271,15 @@ board.onkeydown = e => {
     }
     saveTasks();
   } else if (dx) {
-    // Empty columns are skipped; the row is kept where the next column is long enough.
+    // Empty columns are skipped.
     for (let n = c + dx; columns[n]; n += dx) {
-      const next = columns[n].items;
-      if (next.length) return focusTask(next[Math.min(i, next.length - 1)].id);
+      const cards = [...columns[n].list.children];
+      if (cards.length) return nearestTo(centerY(card), cards, centerY).focus();
     }
   } else if (items[i + dy]) {
     focusTask(items[i + dy].id);
   } else if (dy < 0) {
-    nearestTo(centerX(columns[c].list), toolbar, b => b).focus();
+    nearestTo(centerX(columns[c].list), toolbar, centerX).focus();
   }
 };
 
