@@ -107,6 +107,8 @@ textarea { resize: vertical; min-height: 80px; }
 .actions .danger { color: var(--danger); }
 #help-button { font-weight: 600; }
 #help { width: min(520px, calc(100% - 32px)); }
+/* Focused on open so the help starts at the top, not scrolled to the Close button; it is not a control, so it gets no ring. */
+#help-title:focus { outline: none; }
 #help h4 { margin-top: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 #help ul { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
 #help td { padding: 3px 0; vertical-align: top; }
