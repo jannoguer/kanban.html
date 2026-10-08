@@ -254,10 +254,12 @@ function escape() {
   }
   el.blur();
 }
+// Shift is left out: it types ? and moves tasks.
+const hasModifier = e => e.ctrlKey || e.metaKey || e.altKey;
 document.addEventListener('keydown', e => {
   if (anyOpen()) return;
   if (e.key === 'Escape') return escape();
-  if (e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
+  if (hasModifier(e) || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
     e.preventDefault();
     search.focus();
@@ -281,7 +283,7 @@ const centerX = el => el.getBoundingClientRect().left + el.offsetWidth / 2;
 const nearestTo = (x, list, elOf) => list.reduce((a, b) => Math.abs(centerX(elOf(b)) - x) < Math.abs(centerX(elOf(a)) - x) ? b : a);
 document.querySelector('nav').onkeydown = e => {
   const i = toolbar.indexOf(e.target);
-  if (i === -1 || !(e.key in STEPS) || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (i === -1 || !(e.key in STEPS) || hasModifier(e)) return;
   e.preventDefault();
   const [dx, dy] = STEPS[e.key];
   if (dx) {
@@ -294,7 +296,7 @@ document.querySelector('nav').onkeydown = e => {
 // Arrows move focus between cards; with Shift they move the focused task instead.
 board.onkeydown = e => {
   const card = e.target.closest('.task');
-  if (!card || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (!card || hasModifier(e)) return;
   const task = tasks.find(byId(card.dataset.id));
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -338,7 +340,7 @@ function openDialog(task, status = DEFAULT_STATUS) {
   fields.description.value = task?.description ?? '';
   fields.status.value = task?.status ?? status;
   deleteButton.hidden = !task;
-  setHash(task ? `#${encodeURIComponent(task.id)}` : '#new');
+  setHash(task ? hashOf(task) : '#new');
   dialog.showModal();
 }
 
@@ -349,6 +351,7 @@ function openHelp() {
 
 // Replaced rather than pushed, so dialogs leave no history entries; this fires no hashchange either.
 const setHash = hash => history.replaceState(null, '', hash || location.pathname + location.search);
+const hashOf = task => `#${encodeURIComponent(task.id)}`;
 const anyOpen = () => dialog.open || help.open;
 
 // The hash names the open dialog, so it can be linked to and survives a reload; an unknown one is dropped.
@@ -356,7 +359,7 @@ function openFromHash() {
   const hash = location.hash;
   dialog.close();
   help.close();
-  const task = tasks.find(t => `#${encodeURIComponent(t.id)}` === hash);
+  const task = tasks.find(t => hashOf(t) === hash);
   if (hash === '#help') openHelp();
   else if (hash === '#new') openDialog(null);
   else if (task) openDialog(task);

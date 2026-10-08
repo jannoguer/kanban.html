@@ -69,11 +69,8 @@ main {
 }
 section { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
 section:last-child { border-right: 0; }
-section h2 {
-  display: flex; justify-content: space-between; padding: 12px;
-  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--muted); border-bottom: 2px solid var(--accent);
-}
+section h2, #help h4 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+section h2 { display: flex; justify-content: space-between; padding: 12px; border-bottom: 2px solid var(--accent); }
 /* The stable gutter keeps cards the same width with or without a scrollbar, so measured heights hold. */
 .list { flex: 1; overflow-y: auto; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
 /* Stand in for the cards outside the built window; the negative margins cancel their gaps. */
@@ -116,7 +113,7 @@ textarea { resize: vertical; min-height: 80px; }
 #help { width: min(520px, calc(100% - 32px)); }
 /* Focused on open so the help starts at the top, not scrolled to the Close button; it is not a control, so it gets no ring. */
 #help-title:focus { outline: none; }
-#help h4 { margin-top: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+#help h4 { margin-top: 6px; }
 #help ul { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
 #help td { padding: 3px 0; vertical-align: top; }
 #help td:first-child { padding-right: 16px; white-space: nowrap; }
