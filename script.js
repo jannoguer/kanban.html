@@ -233,7 +233,6 @@ const typesHere = e => e.target.matches('input, textarea, select');
 const actions = {
   f: () => search.focus(),
   '?': openHelp,
-  q: () => document.activeElement.blur(),
   n: () => openDialog(null),
   c: () => {
     search.value = '';
@@ -243,13 +242,9 @@ const actions = {
   y: () => travel(future, past),
 };
 document.addEventListener('keydown', e => {
-  // Q types in text fields, so Esc stays the way out of them and the native way to close a dialog.
+  // Esc closes an open dialog natively.
+  if (anyOpen()) return;
   const key = hasModifier(e) || typesHere(e) ? '' : e.key.toLowerCase();
-  const open = [dialog, help].find(d => d.open);
-  if (open) {
-    if (key === 'q') open.close();
-    return;
-  }
   if (e.key === 'Escape') return e.target.blur();
   if (key in actions) {
     e.preventDefault();
@@ -292,7 +287,7 @@ board.onkeydown = e => {
   const card = e.target.closest('.task');
   if (!card || hasModifier(e)) return;
   const task = tasks.find(byId(card.dataset.id));
-  if (e.key === 'Enter' || e.key.toLowerCase() === 'e') {
+  if (e.key === 'Enter') {
     e.preventDefault();
     openDialog(task);
     return;
