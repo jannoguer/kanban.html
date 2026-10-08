@@ -643,6 +643,7 @@ function moveTask(id, status, beforeId) {
 }
 
 document.getElementById('export').onclick = () => {
+  if (!tasks.length) return;
   const link = document.createElement('a');
   link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(tasks, null, 2));
   // Swedish dates are ISO-shaped and, unlike toISOString(), in local time.
@@ -668,7 +669,7 @@ importFile.onchange = async () => {
   // Without the reset, picking the same file again fires no change event.
   importFile.value = '';
   if (!imported) {
-    alert('That file is not a planning board export.');
+    alert('This file is not compatible.');
     return;
   }
   if (tasks.length && !confirm(`Replace the ${tasks.length} current tasks with the ${imported.length} in the file?`)) return;
@@ -680,7 +681,8 @@ document.getElementById('delete-all').onclick = () => {
   const n = tasks.length;
   if (!n) return;
   const what = n === 1 ? 'the 1 task' : `all ${n} tasks`;
-  if (!confirm(`Delete ${what}?`)) return;
+  if (!confirm(`Delete ${what}? This cannot be undone.`)) return;
+  if (!confirm(`Really delete ${what}? There is no undo for this.`)) return;
   tasks = [];
   saveTasks();
 };
