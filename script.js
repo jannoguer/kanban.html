@@ -227,6 +227,17 @@ function saveTasks() {
 document.getElementById('storage-dismiss').onclick = () => { storageToast.hidden = true; };
 
 search.oninput = render;
+// The mouseup of a focusing click would collapse the selection, so that one is cancelled; a click into the focused field still places the caret.
+let selectedOnFocus = false;
+search.onfocus = () => {
+  search.select();
+  selectedOnFocus = true;
+};
+search.onmousedown = () => { selectedOnFocus = false; };
+search.onmouseup = e => {
+  if (selectedOnFocus) e.preventDefault();
+  selectedOnFocus = false;
+};
 search.onkeydown = e => {
   if (e.key === 'Enter') {
     focusFirst();
