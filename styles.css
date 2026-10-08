@@ -109,7 +109,7 @@ input, textarea, select {
   font: inherit; color: var(--fg); background: var(--bg);
   padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
 }
-textarea { resize: vertical; min-height: 80px; }
+textarea { resize: vertical; min-height: 120px; scrollbar-width: none; }
 .actions { display: flex; gap: 8px; margin-top: 18px; }
 .actions button, .toast button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); }
 .actions .primary { background: var(--fg); color: var(--surface); border-color: var(--fg); }
