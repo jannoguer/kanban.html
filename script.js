@@ -234,6 +234,7 @@ search.onkeydown = e => {
     search.value = '';
     search.blur();
     render();
+    focusFirst();
   }
 };
 function focusFirst() {
