@@ -69,8 +69,7 @@ boardName.onblur = () => {
   nameBeforeEdit = null;
 };
 boardName.onkeydown = e => {
-  if (e.key === 'Escape') boardName.value = nameBeforeEdit;
-  if (e.key === 'Enter' || e.key === 'Escape') boardName.blur();
+  if (e.key === 'Enter') boardName.blur();
 };
 // Closing or reloading mid-edit fires no blur, so the edit is committed here.
 addEventListener('pagehide', () => {
@@ -239,21 +238,26 @@ search.onmouseup = e => {
   selectedOnFocus = false;
 };
 search.onkeydown = e => {
-  if (e.key === 'Enter') {
-    focusFirst();
-  } else if (e.key === 'Escape') {
-    search.value = '';
-    search.blur();
-    render();
-    focusFirst();
-  }
+  if (e.key === 'Enter') focusFirst();
 };
 function focusFirst() {
   const first = columns.find(c => c.items.length)?.items[0];
   if (first) focusTask(first.id);
 }
+// Esc cancels what the focused control is doing and drops the focus.
+function escape() {
+  const el = document.activeElement;
+  if (el === boardName) boardName.value = nameBeforeEdit;
+  if (el === search) {
+    search.value = '';
+    render();
+  }
+  el.blur();
+}
 document.addEventListener('keydown', e => {
-  if (anyOpen() || e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
+  if (anyOpen()) return;
+  if (e.key === 'Escape') return escape();
+  if (e.ctrlKey || e.metaKey || e.altKey || e.target.matches('input, textarea, select')) return;
   if (e.key === '/') {
     e.preventDefault();
     search.focus();
