@@ -109,6 +109,8 @@ textarea { resize: vertical; min-height: 80px; }
 .actions button, .toast button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); }
 .actions .primary, .toast .primary { background: var(--fg); color: var(--surface); border-color: var(--fg); }
 .actions .primary { margin-left: auto; }
+/* The inverted fill would swallow a ring in the usual color, so the ring is drawn inside it in the inverted color. */
+.primary:focus-visible { outline: 2px solid var(--surface); outline-offset: -4px; }
 .actions .danger { color: var(--danger); }
 #help-button { font-weight: 600; }
 #help { width: min(520px, calc(100% - 32px)); }
