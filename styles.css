@@ -65,18 +65,27 @@ section h2, #help h4 { font-size: 12px; font-weight: 600; text-transform: upperc
 section h2 { display: flex; justify-content: space-between; padding: 12px; border-bottom: 2px solid var(--accent); }
 .list { flex: 1; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
 /* Fog stands in for the scrollbar: it fades the edge that hides content. A box that does not scroll has no timeline, so both stay 0 and nothing fades. */
-@property --fog-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
-@property --fog-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
+/* Inherited so the help's fog strips can read them. */
+@property --fog-top { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --fog-bottom { syntax: "<length>"; inherits: true; initial-value: 0px; }
 @supports (animation-timeline: scroll()) {
   .list, #help {
     --fog: 40px;
-    mask: linear-gradient(transparent, #000 var(--fog-top), #000 calc(100% - var(--fog-bottom)), transparent);
     animation: fog-top linear both, fog-bottom linear both;
     animation-timeline: scroll(self);
     animation-range: 0% var(--fog), calc(100% - var(--fog)) 100%;
     /* Keeps a focused element clear of the fog when focusing scrolls it into view. */
     scroll-padding-block: var(--fog);
   }
+  .list { mask: linear-gradient(transparent, #000 var(--fog-top), #000 calc(100% - var(--fog-bottom)), transparent); }
+  /* Masking the help card would show the board through it, so strips fade its text into the card instead; they start once the card's edge, 16px in, has left the screen. */
+  #help { animation-range: 16px calc(16px + var(--fog)), calc(100% - 16px - var(--fog)) calc(100% - 16px); }
+  #help::before, #help::after {
+    content: ""; position: fixed; left: 50%; translate: -50%;
+    width: calc(min(520px, 100% - 32px) - 2px);
+  }
+  #help::before { top: 0; height: var(--fog-top); background: linear-gradient(var(--surface), transparent); }
+  #help::after { bottom: 0; height: var(--fog-bottom); background: linear-gradient(transparent, var(--surface)); }
   @keyframes fog-top { to { --fog-top: var(--fog); } }
   @keyframes fog-bottom { from { --fog-bottom: var(--fog); } }
 }
