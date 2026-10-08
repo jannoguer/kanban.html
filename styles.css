@@ -40,9 +40,14 @@ nav > div { display: flex; align-items: center; gap: 12px; }
   border: 1px solid var(--line); border-radius: 8px;
 }
 .icon:hover { background: var(--bg); }
-.group { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.group { display: flex; border: 1px solid var(--line); border-radius: 8px; }
+/* The end buttons carry the group's rounding (minus its border) so hover fills and focus rings follow the shape. */
 .group .icon { height: 30px; border: 0; border-radius: 0; }
+.group .icon:first-child { border-radius: 7px 0 0 7px; }
+.group .icon:last-child { border-radius: 0 7px 7px 0; }
 .group .icon + .icon { border-left: 1px solid var(--line); }
+/* The later sibling would paint over the shared edge of the ring. */
+.group .icon:focus-visible { position: relative; z-index: 1; }
 
 .switch {
   position: relative; display: flex; justify-content: space-between; align-items: center;
