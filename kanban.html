@@ -485,7 +485,7 @@ board.onkeydown = e => {
   if (e.key === 'Enter') openDialog(task);
   else if (e.key.toLowerCase() === 'd') deleteTask(task);
   else if (step && holdingG) moveFocusedTask(task, ...step);
-  else if (step) moveFocus(card, ...step);
+  else if (step) moveFocus(card, ...step, e.repeat);
   else return;
   e.preventDefault();
 };
@@ -517,12 +517,15 @@ function moveFocusedTask(task, dx, dy) {
 }
 
 // Up past the first card reaches the toolbar; left and right skip empty columns.
-function moveFocus(card, dx, dy) {
+function moveFocus(card, dx, dy, repeat) {
   const list = card.parentElement;
   if (dy > 0) {
     card.nextElementSibling?.focus();
   } else if (dy < 0) {
-    (card.previousElementSibling ?? nearestTo(centerX(list), toolbar, centerX)).focus();
+    const prev = card.previousElementSibling;
+    if (prev) prev.focus();
+    // A held key parks on the top card; only a fresh press climbs into the toolbar.
+    else if (!repeat) nearestTo(centerX(list), toolbar, centerX).focus();
   } else {
     const c = columns.findIndex(col => col.list === list);
     for (let n = c + dx; columns[n]; n += dx) {
