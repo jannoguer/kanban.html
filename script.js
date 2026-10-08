@@ -231,7 +231,7 @@ document.getElementById('storage-dismiss').onclick = () => { storageToast.hidden
 search.oninput = render;
 search.onfocus = () => search.select();
 search.onkeydown = e => {
-  if (e.key === 'Enter') focusFirst();
+  if (e.key === 'Enter' && !focusFirst()) search.blur();
 };
 function focusFirst() {
   const first = columns.find(c => c.items.length)?.items[0];
