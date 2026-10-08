@@ -82,8 +82,8 @@ section h2 { display: flex; justify-content: space-between; padding: 12px; borde
 }
 .task p { margin-top: 4px; color: var(--muted); white-space: pre-wrap; }
 .task p:empty { display: none; }
-/* Inverted like the primary button, so it stands out from every column tint in both themes; no padding, so the measured heights hold. */
-.task mark { background: var(--fg); color: var(--surface); border-radius: 2px; box-shadow: 0 0 0 1px var(--fg); }
+/* A stronger wash of the column's own tint, so it reads as part of the card in both themes; no padding, so the measured heights hold. */
+.task mark { background: color-mix(in srgb, var(--accent) 40%, transparent); color: inherit; border-radius: 2px; }
 .task:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 .task.dragging { opacity: .4; }
 /* Negative margins cancel its share of the list gap, so showing it never shifts the cards. */
