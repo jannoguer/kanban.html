@@ -36,12 +36,14 @@ let tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
 let editingId = null;
 
 // Keyboard only, but the pointer may still select text: presses on controls neither focus them nor open a select, clicks do nothing, and the wheel does not scroll.
+// A text field takes presses only once the keyboard has focused it, so the pointer can select inside it but not enter it.
 const pointerHint = document.getElementById('pointer-hint');
 let hintTimer;
 let pressedAt;
 addEventListener('mousedown', e => {
   pressedAt = [e.clientX, e.clientY];
-  if (e.target.closest('button, select')) e.preventDefault();
+  const enters = e.target.matches('input, textarea') && e.target !== document.activeElement;
+  if (enters || e.target.closest('button, select')) e.preventDefault();
 });
 // A click from Enter or Space has no click count, so the keyboard still activates buttons; a click that ends a drag is a selection, so it stays quiet.
 addEventListener('click', e => {
