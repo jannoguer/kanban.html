@@ -358,7 +358,8 @@ board.ondrop = e => {
 document.getElementById('export').onclick = () => {
   const link = document.createElement('a');
   link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(tasks, null, 2));
-  link.download = 'planning-board.json';
+  // Swedish dates are ISO-shaped and, unlike toISOString(), in local time.
+  link.download = `${boardName.value}-${new Date().toLocaleDateString('sv')}.json`;
   link.click();
 };
 
